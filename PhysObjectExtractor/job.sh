@@ -18,16 +18,16 @@ echo "Process:" $PROCESS
 FILE=$3
 echo "File:" $FILE
 
-#EOS_HOME=/eos/user/e/ecarrera
-EOS_HOME=/eos/user/FIRST_LETTER/USERNAME
+EOS_HOME=/eos/user/e/ecarrera
+#EOS_HOME=/eos/user/FIRST_LETTER/USERNAME
 echo "EOS home:" $EOS_HOME
 
-#OUTPUT_DIR=${EOS_HOME}/dpoa/workshop2021/
-OUTPUT_DIR=${EOS_HOME}/opendata_files/
+OUTPUT_DIR=${EOS_HOME}/dpoa/workshop2021/
+#OUTPUT_DIR=${EOS_HOME}/opendata_files/
 echo "Output directory:" $OUTPUT_DIR
 
-#CMSSW_BASE=/afs/cern.ch/work/e/ecarrera/dpoa/workshop2021/CMSSW_5_3_32
-CMSSW_BASE=/afs/cern.ch/work/FIRST_LETTER/USERNAME/CMSSW_5_3_32
+CMSSW_BASE=/afs/cern.ch/work/e/ecarrera/dpoa/workshop2021/CMSSW_5_3_32
+#CMSSW_BASE=/afs/cern.ch/work/FIRST_LETTER/USERNAME/CMSSW_5_3_32
 echo "CMSSW base:" $CMSSW_BASE
 
  CONFIG=${CMSSW_BASE}/src/PhysObjectExtractorTool/PhysObjectExtractor/python/poet_cfg.py

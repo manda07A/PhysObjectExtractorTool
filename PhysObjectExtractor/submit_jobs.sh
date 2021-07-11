@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Define path for job directories
-# BASE_PATH=/afs/cern.ch/work/e/ecarrera/dpoa/workshop2021/CMSSW_5_3_32/src/PhysObjectExtractorTool/PhysObjectExtractor/joblaunch
-BASE_PATH=/path/to/job/directory
+ BASE_PATH=/afs/cern.ch/work/e/ecarrera/dpoa/workshop2021/CMSSW_5_3_32/src/PhysObjectExtractorTool/PhysObjectExtractor/joblaunch
+#BASE_PATH=/path/to/job/directory
 mkdir -p $BASE_PATH
 
 # Set processes
