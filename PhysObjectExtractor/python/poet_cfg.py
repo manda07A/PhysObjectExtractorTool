@@ -27,7 +27,7 @@ process.MessageLogger.cerr.INFO = cms.untracked.PSet(
 process.options = cms.untracked.PSet(wantSummary=cms.untracked.bool(True))
 
 #Select the maximum number of events to process (if -1, run over all events)
-process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(100) )
+process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 #Load needed configuration
 process.load("Configuration.Geometry.GeometryIdeal_cff")
@@ -71,10 +71,6 @@ process.load('Configuration.StandardSequences.Services_cff')
 #The global tag must correspond to the needed epoch (comment out if no conditions needed)
 if isData: process.GlobalTag.globaltag = 'FT53_V21A_AN6::All'
 else: process.GlobalTag.globaltag = "START53_V27::All"
-#if isData: process.GlobalTag.connect = cms.string('sqlite_file:/opt/cms-opendata-conddb/FT53_V21A_AN6_FULL_data_stripped.db')
-#else:  process.GlobalTag.connect = cms.string('sqlite_file:/opt/cms-opendata-conddb/START53_V27_MC_stripped.db')
-#if isData: process.GlobalTag.globaltag = 'FT53_V21A_AN6_FULL::All'
-#else: process.GlobalTag.globaltag = "START53_V27::All"
 
 # Uncomment this section to apply the data quality JSON file filter. 
 # It needs to be done after the process.source definition
