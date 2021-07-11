@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import ROOT
+from ROOT import TFile, TDirectory, TTree
 ROOT.PyConfig.IgnoreCommandLineOptions = True
 ROOT.gROOT.SetBatch(True)
 import os
@@ -80,16 +81,43 @@ def main(input_dir):
         out_list = open(path_list, "w")
         for a in argument_list:
             out_list.write(a+"\n")
-        raise Exception("Found missing files, wrote arguments list to %s."%(path_list))
+        #raise Exception("Found missing files, wrote arguments list to %s."%(path_list))
 
-    # Merge files
-    #chain = ROOT.TChain("myevents/Events")
-    output_path = os.path.join(input_dir.replace(process, ""), process+".root")
-    hadd_str = "hadd "+output_path
+
+    #https://root-forum.cern.ch/t/moving-ttrees-into-tdirectories/25386/8
+    #Extract directories and trees structure
+    oldf = TFile.Open(files.values()[0],"READ")
+    treename = "Events"
+    mychains = []
+    mydirs = []
+    for k in oldf.GetListOfKeys():
+        mydirs.append(k.ReadObj().GetName())
+        thechain = ROOT.TChain(k.ReadObj().GetName()+"/"+treename)
+        mychains.append(thechain)
+
+    # Merge trees in directories
     for f in files.values():
-        hadd_str = hadd_str+" "+f
+        for ch in mychains:
+            ch.Add(f)
+    
+    #clone chains and write to a new file
+    output_path = os.path.join(input_dir.replace(process, ""), process+".root")
+    newf = TFile.Open(output_path,'RECREATE')
 
-    os.system(hadd_str)
+    #create directories in new file:
+    for d in mydirs:
+        newf.cd()
+        newf.mkdir(d)
+
+    #Clone chain in tree for corresponding dir in new file:
+    for d,ch in zip(mydirs,mychains):
+        newf.cd()
+        newf.cd(d)
+        newtree = ch.CloneTree()
+        newtree.Write()
+
+    newf.Close()
+    
     print("Wrote merged file to %s."%(output_path))
 
 if __name__ == "__main__":
