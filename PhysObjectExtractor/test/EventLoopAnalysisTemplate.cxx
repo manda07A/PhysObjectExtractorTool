@@ -23,17 +23,36 @@
 #include <TCanvas.h>
 #include <TH1F.h>
 #include "TLatex.h"
+#include "TStopwatch.h"
 //Include C++ classes
 #include <iostream>
 #include <vector>
-	
+#include <map>
+#include <string>
+
 using namespace std;
 
-//book example histograms
-TH1F* lumib = new TH1F("lumib","Luminosity block",10000,0,10000);
-TH1F* h_nmu = new TH1F("h_nmu","Number of muons",200,0,200);
-TH1F* h_mu_e = new TH1F("h_mu_e","Muon Energy",2000,0,2000);
-TH1F* h_mu_pt = new TH1F("h_mu_pt","Muon p_{T}",2000,0,2000);
+
+/*
+ * Base path to local filesystem or to EOS containing the datasets
+ */
+//const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/derived-data/AOD2NanoAODOutreachTool/";
+const std::string samplesBasePath = "";
+
+
+/*
+ * Names of the datasets to be found in the base path and processed for the analysis
+ */
+
+
+
+//book example histograms for specific variables
+//copy them in the constructor if you add more
+const int numberOfHistograms = 2;
+TH1F* dataRunB_npv = new TH1F("dataRunB_npv","Number of primary vertices",25,5,30);
+TH1F* dataRunC_npv = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
+
+
 
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
@@ -42,54 +61,71 @@ class EventLoopAnalysisTemplate {
 public :
 	
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain	
-   TTree	  *tmuons;  
+   TTree          *tvertex;
    //Add more trees for friendship
 
    Int_t           fCurrent; //!current Tree number in a TChain
+  TString          labeltag;
+   TString         filename;
+
+  //array to keep histograms to be written and easily loop over them
+   TH1F            *hists[numberOfHistograms];
 
    // Declaration of example leaf types
    Int_t           run;
    UInt_t          luminosityBlock;
    ULong64_t	   event;
-   vector<float>   *muon_e;
-   vector<float>   *muon_pt;
+   Int_t           PV_npvs;
+
 
    // List of example branches
    TBranch        *b_run;   //!
    TBranch        *b_luminosityBlock;   //!
    TBranch        *b_event;   //!
-   TBranch        *b_muon_e;   //!
-   TBranch        *b_muon_pt;   //!
+   TBranch        *b_PV_npvs;   //!
 
-   EventLoopAnalysisTemplate(TTree *tree=0);
-   virtual ~EventLoopAnalysisTemplate();
-   virtual Int_t    Cut(Long64_t entry);
-   virtual Int_t    GetEntry(Long64_t entry);
-   virtual Long64_t LoadTree(Long64_t entry);
-   virtual void     Init(TTree *tree);
-   virtual void     Loop();
-   virtual Bool_t   Notify();
-   virtual void     Show(Long64_t entry = -1);
-   void analysis();
+
+  EventLoopAnalysisTemplate(TString filename, TString labeltag);
+  virtual ~EventLoopAnalysisTemplate();
+  virtual Int_t    Cut(Long64_t entry);
+  virtual Int_t    GetEntry(Long64_t entry);
+  virtual Long64_t LoadTree(Long64_t entry);
+  virtual void     Init(TTree *tree);
+  virtual void     Loop();
+  virtual Bool_t   Notify();
+  virtual void     Show(Long64_t entry = -1);
+  void analysis();
+ 
 };
 
-EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TTree *tree) : fChain(0)
+EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString thelabel) : fChain(0)
 {
+  //Prepare some info for the object:
+  filename = thefile;
+  labeltag = thelabel;
+  
+
+  //Load histograms of interest to the object
+  hists[0] = dataRunB_npv;
+  hists[1] = dataRunC_npv;
+
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
+   TTree* tree = 0;
    if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject("myoutput.root");
+      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(filename);
       if (!f || !f->IsOpen()) {
-         f = new TFile("myoutput.root");
+         f = new TFile(filename);
       }
-      TDirectory * dir = (TDirectory*)f->Get("myoutput.root:/myevents");
+      //always, by default, use myevents as starting directory/tree
+      TDirectory * dir = (TDirectory*)f->Get(filename+":/myevents");
       dir->GetObject("Events",tree);
 
       //Get trees for friendship
-      tmuons = (TTree*)f->Get("mymuons/Events");
+      tvertex = (TTree*)f->Get("mypvertex/Events");
       
       //Make friendship	
-      tree->AddFriend(tmuons);
+      tree->AddFriend(tvertex);
 	
    }
    Init(tree);
@@ -134,10 +170,6 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    // Init() will be called many times when running on PROOF
    // (once per file to be processed).
 
-   // Set object pointer
-   muon_e = 0;
-   muon_pt = 0;
-
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
@@ -147,9 +179,7 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("run", &run, &b_run);
    fChain->SetBranchAddress("luminosityBlock", &luminosityBlock, &b_luminosityBlock);
    fChain->SetBranchAddress("event", &event, &b_event);
-   fChain->SetBranchAddress("muon_e", &muon_e, &b_muon_e);
-   fChain->SetBranchAddress("muon_pt", &muon_pt, &b_muon_pt);
-   
+   fChain->SetBranchAddress("PV_npvs", &PV_npvs, &b_PV_npvs);
    Notify();
 }
 
@@ -198,6 +228,7 @@ void EventLoopAnalysisTemplate::Loop()
        if (ientry < 0) break;
        nb = fChain->GetEntry(jentry);   nbytes += nb;
        // if (Cut(ientry) < 0) continue;
+
        //Perform the analysis
        analysis();
 
@@ -210,26 +241,24 @@ void EventLoopAnalysisTemplate::analysis()
 {
 //-----------------------------------------------------------------
 
-   //cout<<"Make histogram of lumi blocks"<<endl;
-   lumib->Fill(luminosityBlock);	
+  //cout<<"analysis() execution"<<endl;
+  
+  //fill histograms
+  Int_t histsize = sizeof(hists)/sizeof(hists[0]);
+  for (Int_t j=0;j<histsize;++j){
+    TString histname = TString(hists[j]->GetName());
+    TString thelabel = TString(histname.Tokenize("_")->At(0)->GetName());
+    TString thevar = TString(histname.Tokenize("_")->At(1)->GetName());
 
-   //Loop over muons container and fill histo if cut is passed
-   Int_t nmuons = muon_pt->size();
-   cout<<"Number of muons = "<<nmuons<<endl;
-   h_nmu->Fill(nmuons);
-   float mu_pt_cut = 20; //in GeV
-   if(nmuons>0){
-     for (Int_t j=0; j<nmuons;++j){
-       cout<<"Muon pT = "<<muon_pt->at(j)<<endl;
-       if (muon_pt->at(j)>mu_pt_cut){
-	 h_mu_pt->Fill(muon_pt->at(j));
-	 h_mu_e->Fill(muon_e->at(j));
-       }
-     }
-   }
+    if (thelabel == labeltag && thevar == "npv"){
+      hists[j]->Fill(PV_npvs);
+    }
+
+  }
 
 
 }
+
 
 
 //-----------------------------------------------------------------
@@ -237,21 +266,43 @@ int main()
 {
 //-----------------------------------------------------------------
 
-    cout<<"Build the analysis object"<<endl;
-    EventLoopAnalysisTemplate mytemplate;
+  vector< pair<string,string> > sampleNames;
+  //sampleNames.push_back(make_pair("GluGluToHToTauTau","ggH"));
+  //sampleNames.push_back(make_pair("VBF_HToTauTau","qqH"));
+  //sampleNames.push_back(make_pair("W1JetsToLNu","W1J"));
+  //sampleNames.push_back(make_pair("W2JetsToLNu","W2J"));
+  //sampleNames.push_back(make_pair("W3JetsToLNu","W3J"));
+  //sampleNames.push_back(make_pair("TTbar","TT"));
+  //sampleNames.push_back(make_pair("DYJetsToLL","ZLL"));
+  //sampleNames.push_back(make_pair("DYJetsToLL","ZTT"));
+  sampleNames.push_back(make_pair("Run2012B_TauPlusX","dataRunB"));
+  sampleNames.push_back(make_pair("Run2012C_TauPlusX","dataRunC"));
+
+			
+  //loop over sample files with names  defined above
+  for(UInt_t j=0; j<sampleNames.size();++j){
+    TString samplename = sampleNames.at(j).first;
+    TString thelabel = sampleNames.at(j).second;
+  
+    cout << ">>> Processing sample " << samplename <<" with label "<<thelabel<<":" <<endl;
+    TStopwatch time;
+    time.Start();
+ 
+    TString filename = samplesBasePath+samplename+".root";
+    
+    cout<<"Build the analysis object with file "<<filename<<endl;
+    EventLoopAnalysisTemplate mytemplate(filename,thelabel);
 
     cout<<"Run the event loop"<<endl;
     mytemplate.Loop();
 
-    cout<<"Save the histograms"<<endl;
-    TFile* hfile = new TFile("histograms.root","RECREATE");
-    lumib->Write();
-    h_nmu->Write();
-    h_mu_e->Write();
-    h_mu_pt->Write();
-    hfile->Close();
+  }
 
-    return 1;
+  TFile* hfile = new TFile("histograms.root","RECREATE");
+  dataRunB_npv->Write();
+  dataRunC_npv->Write();
+  hfile->Close();
+  return 1;
 
 }
 
