@@ -96,9 +96,13 @@ def main(input_dir):
         mychains.append(thechain)
 
     # Merge trees in directories
+    mycounter = 1
     for f in files.values():
+        if((mycounter%1.)==0):
+            print ("Merging file # "+str(mycounter)+" "+f)
         for ch in mychains:
             ch.Add(f)
+        mycounter+=1
     
     #clone chains and write to a new file
     output_path = os.path.join(input_dir.replace(process, ""), process+".root")
@@ -109,8 +113,11 @@ def main(input_dir):
         newf.cd()
         newf.mkdir(d)
 
+    mycounter = 1
     #Clone chain in tree for corresponding dir in new file:
     for d,ch in zip(mydirs,mychains):
+        if (mycounter%1.==0):
+            print ("Cloning and writiing directory "+d)
         newf.cd()
         newf.cd(d)
         newtree = ch.CloneTree()
