@@ -47,16 +47,17 @@ TH1F* dataRunB_npv = new TH1F("dataRunB_npv","Number of primary vertices",25,5,3
 TH1F* dataRunC_npv = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
 TH1F* ZTT_npv = new TH1F("ZTT_npv","Number of primary vertices",25,5,30);
 
-
-
+//Requiered trigger
+string triggerRequest = "HLT_L2DoubleMu23_NoVertex";
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
-const Int_t kMaxtriggermap = 5;
+
 
 class EventLoopAnalysisTemplate {
 public :
 	
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain	
+  TTree          *tevents;
    TTree          *tvertex;
    TTree          *ttrigger;
    //Add more trees for friendship
@@ -73,9 +74,7 @@ public :
    UInt_t          luminosityBlock;
    ULong64_t	   event;
    Int_t           PV_npvs;
-   Int_t           triggermap_;
-   string          triggermap_first[kMaxtriggermap];
-   Int_t           triggermap_second[kMaxtriggermap];   //[triggermap_]
+   std::map<std::string, int> *triggermap;
 
 
    // List of example branches
@@ -83,11 +82,7 @@ public :
    TBranch        *b_luminosityBlock;   //!
    TBranch        *b_event;   //!
    TBranch        *b_PV_npvs;   //!
-   TBranch        *b_triggermap_;   //!
-   TBranch        *b_triggermap_first;   //!
-   TBranch        *b_triggermap_second;   //!
-
-
+   TBranch        *b_triggermap;   //!
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag);
   virtual ~EventLoopAnalysisTemplate();
@@ -123,17 +118,19 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
       if (!f || !f->IsOpen()) {
          f = new TFile(filename);
       }
-      //always, by default, use myevents as starting directory/tree
-      TDirectory * dir = (TDirectory*)f->Get(filename+":/myevents");
+      //always, by default, use mytrigger as starting directory/tree
+      //because it is the most complex
+      TDirectory * dir = (TDirectory*)f->Get(filename+":/mytriggers");
       dir->GetObject("Events",tree);
 
       //Get trees for friendship
+      tevents = (TTree*)f->Get("myevents/Events");
       tvertex = (TTree*)f->Get("mypvertex/Events");
-      ttrigger = (TTree*)f->Get("mytriggers/Events");
-      
+
       //Make friendship	
+      tree->AddFriend(tevents);
       tree->AddFriend(tvertex);
-      tree->AddFriend(ttrigger);
+
 	
    }
    Init(tree);
@@ -156,7 +153,7 @@ Int_t EventLoopAnalysisTemplate::GetEntry(Long64_t entry)
 
 Long64_t EventLoopAnalysisTemplate::LoadTree(Long64_t entry)
 {
-// Set the environment to read one entry
+  //cout<<" Set the environment to read one entry"<<endl;
    if (!fChain) return -5;
    Long64_t centry = fChain->LoadTree(entry);
    if (centry < 0) return centry;
@@ -164,6 +161,7 @@ Long64_t EventLoopAnalysisTemplate::LoadTree(Long64_t entry)
       fCurrent = fChain->GetTreeNumber();
       Notify();
    }
+
    return centry;
 }
 
@@ -178,19 +176,22 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    // Init() will be called many times when running on PROOF
    // (once per file to be processed).
 
+   // Set object pointer
+   triggermap =0;
+
    // Set branch addresses and branch pointers
    if (!tree) return;
    fChain = tree;
    fCurrent = -1;
-   fChain->SetMakeClass(1);
+   //Comment out to be able to read map
+   //https://root-forum.cern.ch/t/std-map-in-ttree-with-makeclass/14171
+   //fChain->SetMakeClass(1);
 
    fChain->SetBranchAddress("run", &run, &b_run);
    fChain->SetBranchAddress("luminosityBlock", &luminosityBlock, &b_luminosityBlock);
    fChain->SetBranchAddress("event", &event, &b_event);
    fChain->SetBranchAddress("PV_npvs", &PV_npvs, &b_PV_npvs);
-   fChain->SetBranchAddress("triggermap", &triggermap_, &b_triggermap_);
-   fChain->SetBranchAddress("triggermap.first", triggermap_first, &b_triggermap_first);
-   fChain->SetBranchAddress("triggermap.second", triggermap_second, &b_triggermap_second);
+   fChain->SetBranchAddress("triggermap",&triggermap,&b_triggermap);
    Notify();
 }
 
@@ -234,13 +235,12 @@ void EventLoopAnalysisTemplate::Loop()
 	if(jentry%1000 == 0) {
 	      cout<<"Processed "<<jentry<<" events out of "<<nentries<<endl;
 	} 
-       //Load the current event	
+       //cout<<"Load the current event"<<endl;
        Long64_t ientry = LoadTree(jentry);
        if (ientry < 0) break;
        nb = fChain->GetEntry(jentry);   nbytes += nb;
        // if (Cut(ientry) < 0) continue;
 
-       //Perform the analysis
        analysis();
 
     }
@@ -253,7 +253,6 @@ void EventLoopAnalysisTemplate::analysis()
 //-----------------------------------------------------------------
 
   //cout<<"analysis() execution"<<endl;
-
   if (!MinimalSelection()) return;
   
   //fill histograms
@@ -281,7 +280,18 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
 {
 //-----------------------------------------------------------------
 
-  return true;
+  //cout<<"Applying minimal selection"<<endl;
+
+  //Check trigger and acceptance bit
+  for (map<string, int>::iterator it=triggermap->begin();it!=triggermap->end();it++){
+    if(it->first.find(triggerRequest)!=string::npos &&
+       it->second!=0){
+	 //cout<<it->first<<"  "<<it->second<<endl;
+      return true;
+    }
+  }
+
+  return false;
 
 }//------MinimalSelection
 
@@ -291,6 +301,8 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
 int main()
 {
 //-----------------------------------------------------------------
+
+  gROOT->ProcessLine("#include<map>");
 
   vector< pair<string,string> > sampleNames;
   //sampleNames.push_back(make_pair("GluGluToHToTauTau","ggH"));
@@ -330,7 +342,7 @@ int main()
   dataRunC_npv->Write();
   ZTT_npv->Write();
   hfile->Close();
-  return 1;
+  return 0;
 
 }
 
