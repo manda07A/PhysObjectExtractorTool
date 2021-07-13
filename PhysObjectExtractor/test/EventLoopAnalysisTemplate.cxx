@@ -29,6 +29,7 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <cmath>
 
 using namespace std;
 
@@ -60,6 +61,8 @@ public :
   TTree          *tevents;
    TTree          *tvertex;
    TTree          *ttrigger;
+  TTree           *tmuons;
+
    //Add more trees for friendship
 
    Int_t           fCurrent; //!current Tree number in a TChain
@@ -75,7 +78,9 @@ public :
    ULong64_t	   event;
    Int_t           PV_npvs;
    std::map<std::string, int> *triggermap;
-
+   vector<float>   *muon_pt;
+   vector<float>   *muon_eta;
+   vector<float>   *muon_tightid;
 
    // List of example branches
    TBranch        *b_run;   //!
@@ -83,6 +88,9 @@ public :
    TBranch        *b_event;   //!
    TBranch        *b_PV_npvs;   //!
    TBranch        *b_triggermap;   //!
+   TBranch        *b_muon_pt;   //!
+   TBranch        *b_muon_eta;   //!
+   TBranch        *b_muon_tightid;   //!
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag);
   virtual ~EventLoopAnalysisTemplate();
@@ -95,6 +103,7 @@ public :
   virtual void     Show(Long64_t entry = -1);
   void analysis();
   bool MinimalSelection();
+  bool FindGoodMuons();
  
 };
 
@@ -126,10 +135,12 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
       //Get trees for friendship
       tevents = (TTree*)f->Get("myevents/Events");
       tvertex = (TTree*)f->Get("mypvertex/Events");
+      tmuons = (TTree*)f->Get("mymuons/Events");
 
       //Make friendship	
       tree->AddFriend(tevents);
       tree->AddFriend(tvertex);
+      tree->AddFriend(tmuons);
 
 	
    }
@@ -178,6 +189,9 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
 
    // Set object pointer
    triggermap =0;
+   muon_pt = 0;
+   muon_eta = 0;
+   muon_tightid = 0;
 
    // Set branch addresses and branch pointers
    if (!tree) return;
@@ -192,6 +206,9 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("event", &event, &b_event);
    fChain->SetBranchAddress("PV_npvs", &PV_npvs, &b_PV_npvs);
    fChain->SetBranchAddress("triggermap",&triggermap,&b_triggermap);
+   fChain->SetBranchAddress("muon_pt", &muon_pt, &b_muon_pt);
+   fChain->SetBranchAddress("muon_eta", &muon_eta, &b_muon_eta);
+   fChain->SetBranchAddress("muon_tightid", &muon_tightid, &b_muon_tightid);
    Notify();
 }
 
@@ -254,6 +271,7 @@ void EventLoopAnalysisTemplate::analysis()
 
   //cout<<"analysis() execution"<<endl;
   if (!MinimalSelection()) return;
+  if (!FindGoodMuons()) return;
   
   //fill histograms
   Int_t histsize = sizeof(hists)/sizeof(hists[0]);
@@ -281,19 +299,57 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
 //-----------------------------------------------------------------
 
   //cout<<"Applying minimal selection"<<endl;
+  bool isTrigger = false;
+  bool isMuons = false;
+  bool isTaus = false;
 
   //Check trigger and acceptance bit
   for (map<string, int>::iterator it=triggermap->begin();it!=triggermap->end();it++){
     if(it->first.find(triggerRequest)!=string::npos &&
        it->second!=0){
 	 //cout<<it->first<<"  "<<it->second<<endl;
-      return true;
+      isTrigger = true;
     }
   }
 
-  return false;
+  //Enforce presence of muons
+  Int_t nmuons = muon_pt->size();
+  if (nmuons>0){isMuons = true;}
+
+  //Enforce presence of taus
+  isTaus = true;
+
+  return (isTrigger && isMuons && isTaus);
 
 }//------MinimalSelection
+
+
+
+
+/*
+ * Find the interesting muons in the muon collection
+ */
+//-----------------------------------------------------------------
+bool EventLoopAnalysisTemplate::FindGoodMuons() 
+{
+//-----------------------------------------------------------------
+  bool isGoodMuon = false;
+
+  float mu_eta_cut = 2.1;
+  float mu_pt_cut = 17; //in GeV
+  Int_t nmuons = muon_pt->size();
+  for (Int_t j=0; j<nmuons;++j){
+    if (abs(muon_eta->at(j))<mu_eta_cut && 
+	muon_pt->at(j)>mu_pt_cut 
+	&& bool(muon_tightid->at(j)) ){
+      isGoodMuon = true;      
+    }
+  }    
+
+  return isGoodMuon;
+
+ }//-------FindGoodMuons
+
 
 
 
