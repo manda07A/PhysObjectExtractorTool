@@ -62,6 +62,7 @@ public :
    TTree          *tvertex;
    TTree          *ttrigger;
   TTree           *tmuons;
+  TTree           *ttaus;
 
    //Add more trees for friendship
 
@@ -81,6 +82,15 @@ public :
    vector<float>   *muon_pt;
    vector<float>   *muon_eta;
    vector<float>   *muon_tightid;
+   vector<float>   *tau_pt;
+   vector<float>   *tau_eta;
+   vector<float>   *tau_ch;
+   vector<float>   *tau_iddecaymode;
+   vector<float>   *tau_idisotight;
+   vector<float>   *tau_idantieletight;
+   vector<float>   *tau_idantimutight;
+   
+  
 
    // List of example branches
    TBranch        *b_run;   //!
@@ -91,6 +101,14 @@ public :
    TBranch        *b_muon_pt;   //!
    TBranch        *b_muon_eta;   //!
    TBranch        *b_muon_tightid;   //!
+   TBranch        *b_tau_pt;   //!
+   TBranch        *b_tau_eta;   //!
+   TBranch        *b_tau_ch;   //!
+   TBranch        *b_tau_iddecaymode;   //!
+   TBranch        *b_tau_idisotight;   //!
+   TBranch        *b_tau_idantieletight;   //!
+   TBranch        *b_tau_idantimutight;   //!
+
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag);
   virtual ~EventLoopAnalysisTemplate();
@@ -104,6 +122,8 @@ public :
   void analysis();
   bool MinimalSelection();
   bool FindGoodMuons();
+  bool FindGoodTaus();
+  bool FindMuonTauPair();
  
 };
 
@@ -136,11 +156,13 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
       tevents = (TTree*)f->Get("myevents/Events");
       tvertex = (TTree*)f->Get("mypvertex/Events");
       tmuons = (TTree*)f->Get("mymuons/Events");
+      ttaus = (TTree*)f->Get("mytaus/Events");
 
       //Make friendship	
       tree->AddFriend(tevents);
       tree->AddFriend(tvertex);
       tree->AddFriend(tmuons);
+      tree->AddFriend(ttaus);
 
 	
    }
@@ -192,6 +214,13 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    muon_pt = 0;
    muon_eta = 0;
    muon_tightid = 0;
+   tau_pt = 0;
+   tau_eta = 0;
+   tau_ch = 0;
+   tau_iddecaymode = 0;
+   tau_idisotight = 0;
+   tau_idantieletight = 0;
+   tau_idantimutight = 0;
 
    // Set branch addresses and branch pointers
    if (!tree) return;
@@ -209,6 +238,13 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("muon_pt", &muon_pt, &b_muon_pt);
    fChain->SetBranchAddress("muon_eta", &muon_eta, &b_muon_eta);
    fChain->SetBranchAddress("muon_tightid", &muon_tightid, &b_muon_tightid);
+   fChain->SetBranchAddress("tau_pt", &tau_pt, &b_tau_pt);
+   fChain->SetBranchAddress("tau_eta", &tau_eta, &b_tau_eta);
+   fChain->SetBranchAddress("tau_ch", &tau_ch, &b_tau_ch);
+   fChain->SetBranchAddress("tau_iddecaymode", &tau_iddecaymode, &b_tau_iddecaymode);
+   fChain->SetBranchAddress("tau_idisotight", &tau_idisotight, &b_tau_idisotight);
+   fChain->SetBranchAddress("tau_idantieletight", &tau_idantieletight, &b_tau_idantieletight);
+   fChain->SetBranchAddress("tau_idantimutight", &tau_idantimutight, &b_tau_idantimutight);
    Notify();
 }
 
@@ -272,6 +308,7 @@ void EventLoopAnalysisTemplate::analysis()
   //cout<<"analysis() execution"<<endl;
   if (!MinimalSelection()) return;
   if (!FindGoodMuons()) return;
+  if (!FindGoodTaus()) return;
   
   //fill histograms
   Int_t histsize = sizeof(hists)/sizeof(hists[0]);
@@ -317,7 +354,8 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
   if (nmuons>0){isMuons = true;}
 
   //Enforce presence of taus
-  isTaus = true;
+  Int_t ntaus = tau_pt->size();
+  if (ntaus>0){isTaus = true;}
 
   return (isTrigger && isMuons && isTaus);
 
@@ -328,6 +366,8 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
 
 /*
  * Find the interesting muons in the muon collection
+ * Reduce the dataset to the interesting events containing at least one interesting
+ * muon candidate.
  */
 //-----------------------------------------------------------------
 bool EventLoopAnalysisTemplate::FindGoodMuons() 
@@ -342,7 +382,8 @@ bool EventLoopAnalysisTemplate::FindGoodMuons()
     if (abs(muon_eta->at(j))<mu_eta_cut && 
 	muon_pt->at(j)>mu_pt_cut 
 	&& bool(muon_tightid->at(j)) ){
-      isGoodMuon = true;      
+      isGoodMuon = true;
+      return isGoodMuon;
     }
   }    
 
@@ -351,6 +392,51 @@ bool EventLoopAnalysisTemplate::FindGoodMuons()
  }//-------FindGoodMuons
 
 
+/*
+ * Find the interesting taus in the tau collection
+ *
+ * The tau candidates in this collection represent hadronic decays of taus, which
+ * means that the tau decays to combinations of pions and neutrinos in the final
+ * state.
+ * Reduce the dataset to the interesting events containing at least one interesting
+ * tau candidate.
+ */
+//-----------------------------------------------------------------
+bool EventLoopAnalysisTemplate::FindGoodTaus() 
+{
+//-----------------------------------------------------------------
+  bool isGoodTau = false;
+
+  float tau_eta_cut = 2.3;
+  float tau_pt_cut = 20; //in GeV
+  Int_t ntaus = tau_pt->size();
+  for (Int_t j=0; j<ntaus;++j){
+    if (tau_ch->at(j)!=0 &&
+	abs(tau_eta->at(j))<tau_eta_cut && 
+	tau_pt->at(j)>tau_pt_cut && 
+	bool(tau_iddecaymode->at(j)) &&
+	bool(tau_idisotight->at(j)) &&
+	bool(tau_idantieletight->at(j)) &&
+	bool(tau_idantimutight->at(j))){
+      isGoodTau = true;
+      return isGoodTau;
+    }
+  }    
+
+  return isGoodTau;
+
+ }//-------FindGoodTaus
+
+
+//-----------------------------------------------------------------
+bool EventLoopAnalysisTemplate::FindMuonTauPair() 
+{
+//-----------------------------------------------------------------
+
+  return true;
+  
+
+}//---------FindMuonTauPair
 
 
 //-----------------------------------------------------------------
