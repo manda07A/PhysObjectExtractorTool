@@ -11,7 +11,7 @@
 //
 //
 // Compile me with:
-// g++ -g -O3 -Wall -Wextra -o EventLoopAnalysis EventLoopAnaalysisTemplate.cxx $(root-config --cflags --libs)
+// g++ -g -O3 -Wall -Wextra -o EventLoopAnalysis EventLoopAnalysisTemplate.cxx $(root-config --cflags --libs)
 /////////////////////////////////////////////////////////////////////
 
 //Include ROOT classes
@@ -24,6 +24,7 @@
 #include <TH1F.h>
 #include "TLatex.h"
 #include "TStopwatch.h"
+#include "Math/Vector4D.h"
 //Include C++ classes
 #include <iostream>
 #include <vector>
@@ -81,15 +82,17 @@ public :
    std::map<std::string, int> *triggermap;
    vector<float>   *muon_pt;
    vector<float>   *muon_eta;
+   vector<float>   *muon_phi;
    vector<float>   *muon_tightid;
    vector<float>   *tau_pt;
    vector<float>   *tau_eta;
+   vector<float>   *tau_phi;
    vector<float>   *tau_ch;
    vector<float>   *tau_iddecaymode;
    vector<float>   *tau_idisotight;
    vector<float>   *tau_idantieletight;
    vector<float>   *tau_idantimutight;
-   
+   vector<float>   *tau_reliso_all;
   
 
    // List of example branches
@@ -100,15 +103,17 @@ public :
    TBranch        *b_triggermap;   //!
    TBranch        *b_muon_pt;   //!
    TBranch        *b_muon_eta;   //!
+   TBranch        *b_muon_phi;   //!
    TBranch        *b_muon_tightid;   //!
    TBranch        *b_tau_pt;   //!
    TBranch        *b_tau_eta;   //!
+   TBranch        *b_tau_phi;   //!
    TBranch        *b_tau_ch;   //!
    TBranch        *b_tau_iddecaymode;   //!
    TBranch        *b_tau_idisotight;   //!
    TBranch        *b_tau_idantieletight;   //!
    TBranch        *b_tau_idantimutight;   //!
-
+   TBranch        *b_tau_reliso_all;   //!
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag);
   virtual ~EventLoopAnalysisTemplate();
@@ -121,11 +126,35 @@ public :
   virtual void     Show(Long64_t entry = -1);
   void analysis();
   bool MinimalSelection();
+  bool isGoodMuon(Int_t idx);
+  bool isGoodTau(Int_t idx);
   bool FindGoodMuons();
   bool FindGoodTaus();
-  bool FindMuonTauPair();
+  std::vector<int> FindMuonTauPair();
  
 };
+
+/*
+ * Helper function to compute the difference in the azimuth coordinate taking
+ * the boundary conditions at 2 * pi into account.
+ */
+//-------------------------------------------------------------------------
+namespace Helper {
+  template <typename T>
+  float DeltaPhi(T v1, T v2, const T c = M_PI)
+  {
+//-------------------------------------------------------------------------
+    float r = std::fmod(v2 - v1, 2.0 * c);
+    if (r < -c) {
+      r += 2.0 * c;
+    }
+    else if (r > c) {
+      r -= 2.0 * c;
+    }
+    return r;
+  }
+}//-----------------Helper
+
 
 EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString thelabel) : fChain(0)
 {
@@ -213,14 +242,17 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    triggermap =0;
    muon_pt = 0;
    muon_eta = 0;
+   muon_phi = 0;
    muon_tightid = 0;
    tau_pt = 0;
    tau_eta = 0;
+   tau_phi = 0;
    tau_ch = 0;
    tau_iddecaymode = 0;
    tau_idisotight = 0;
    tau_idantieletight = 0;
    tau_idantimutight = 0;
+   tau_reliso_all = 0;
 
    // Set branch addresses and branch pointers
    if (!tree) return;
@@ -237,14 +269,17 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("triggermap",&triggermap,&b_triggermap);
    fChain->SetBranchAddress("muon_pt", &muon_pt, &b_muon_pt);
    fChain->SetBranchAddress("muon_eta", &muon_eta, &b_muon_eta);
+   fChain->SetBranchAddress("muon_phi", &muon_phi, &b_muon_phi);
    fChain->SetBranchAddress("muon_tightid", &muon_tightid, &b_muon_tightid);
    fChain->SetBranchAddress("tau_pt", &tau_pt, &b_tau_pt);
    fChain->SetBranchAddress("tau_eta", &tau_eta, &b_tau_eta);
+   fChain->SetBranchAddress("tau_phi", &tau_phi, &b_tau_phi);
    fChain->SetBranchAddress("tau_ch", &tau_ch, &b_tau_ch);
    fChain->SetBranchAddress("tau_iddecaymode", &tau_iddecaymode, &b_tau_iddecaymode);
    fChain->SetBranchAddress("tau_idisotight", &tau_idisotight, &b_tau_idisotight);
    fChain->SetBranchAddress("tau_idantieletight", &tau_idantieletight, &b_tau_idantieletight);
    fChain->SetBranchAddress("tau_idantimutight", &tau_idantimutight, &b_tau_idantimutight);
+   fChain->SetBranchAddress("tau_reliso_all", &tau_reliso_all, &b_tau_reliso_all);
    Notify();
 }
 
@@ -309,6 +344,8 @@ void EventLoopAnalysisTemplate::analysis()
   if (!MinimalSelection()) return;
   if (!FindGoodMuons()) return;
   if (!FindGoodTaus()) return;
+  vector<int> GoodMuonTauPair = FindMuonTauPair();
+  if (GoodMuonTauPair[0]==-1 && GoodMuonTauPair[1]==-1) return;
   
   //fill histograms
   Int_t histsize = sizeof(hists)/sizeof(hists[0]);
@@ -362,32 +399,47 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
 }//------MinimalSelection
 
 
-
-
-/*
- * Find the interesting muons in the muon collection
- * Reduce the dataset to the interesting events containing at least one interesting
- * muon candidate.
- */
+// Give index of muon and check if passes the good muon check
 //-----------------------------------------------------------------
-bool EventLoopAnalysisTemplate::FindGoodMuons() 
+bool EventLoopAnalysisTemplate::isGoodMuon(Int_t idx) 
 {
 //-----------------------------------------------------------------
   bool isGoodMuon = false;
 
   float mu_eta_cut = 2.1;
   float mu_pt_cut = 17; //in GeV
+  if (abs(muon_eta->at(idx))<mu_eta_cut && 
+	muon_pt->at(idx)>mu_pt_cut && 
+      bool(muon_tightid->at(idx)) ){
+    isGoodMuon = true;
+  }
+
+  return isGoodMuon;
+  
+}//----------isGoodMuon
+
+
+
+
+/*
+ * Reduce the loop to the interesting events containing at least one interesting
+ * muon candidate.
+ */
+//-----------------------------------------------------------------
+bool EventLoopAnalysisTemplate::FindGoodMuons() 
+{
+//-----------------------------------------------------------------
+  bool GoodMuonFound = false;
+  
   Int_t nmuons = muon_pt->size();
   for (Int_t j=0; j<nmuons;++j){
-    if (abs(muon_eta->at(j))<mu_eta_cut && 
-	muon_pt->at(j)>mu_pt_cut 
-	&& bool(muon_tightid->at(j)) ){
-      isGoodMuon = true;
-      return isGoodMuon;
+    if (isGoodMuon(j)){
+      GoodMuonFound = true;
+      return GoodMuonFound;
     }
   }    
 
-  return isGoodMuon;
+  return GoodMuonFound;
 
  }//-------FindGoodMuons
 
@@ -398,45 +450,124 @@ bool EventLoopAnalysisTemplate::FindGoodMuons()
  * The tau candidates in this collection represent hadronic decays of taus, which
  * means that the tau decays to combinations of pions and neutrinos in the final
  * state.
- * Reduce the dataset to the interesting events containing at least one interesting
+ */
+//----------------------------------------------------------------- 
+bool EventLoopAnalysisTemplate::isGoodTau(Int_t idx) 
+{
+//-----------------------------------------------------------------
+ bool isGoodTau = false;
+ 
+ float tau_eta_cut = 2.3;
+ float tau_pt_cut = 20; //in GeV
+ 
+ if (tau_ch->at(idx)!=0 &&
+	abs(tau_eta->at(idx))<tau_eta_cut && 
+	tau_pt->at(idx)>tau_pt_cut && 
+	bool(tau_iddecaymode->at(idx)) &&
+	bool(tau_idisotight->at(idx)) &&
+	bool(tau_idantieletight->at(idx)) &&
+	bool(tau_idantimutight->at(idx))){
+      isGoodTau = true;
+    }
+
+ return isGoodTau;
+
+}//-----------isGoodTau
+
+
+
+
+
+/*
+ * Reduce the loop to the interesting events containing at least one interesting
  * tau candidate.
  */
 //-----------------------------------------------------------------
 bool EventLoopAnalysisTemplate::FindGoodTaus() 
 {
 //-----------------------------------------------------------------
-  bool isGoodTau = false;
+  bool GoodTauFound = false;
 
-  float tau_eta_cut = 2.3;
-  float tau_pt_cut = 20; //in GeV
   Int_t ntaus = tau_pt->size();
   for (Int_t j=0; j<ntaus;++j){
-    if (tau_ch->at(j)!=0 &&
-	abs(tau_eta->at(j))<tau_eta_cut && 
-	tau_pt->at(j)>tau_pt_cut && 
-	bool(tau_iddecaymode->at(j)) &&
-	bool(tau_idisotight->at(j)) &&
-	bool(tau_idantieletight->at(j)) &&
-	bool(tau_idantimutight->at(j))){
-      isGoodTau = true;
-      return isGoodTau;
+    if (isGoodTau(j)){
+      GoodTauFound = true;
+      return GoodTauFound;
     }
   }    
 
-  return isGoodTau;
+  return GoodTauFound;
 
  }//-------FindGoodTaus
 
 
 //-----------------------------------------------------------------
-bool EventLoopAnalysisTemplate::FindMuonTauPair() 
+std::vector<int> EventLoopAnalysisTemplate::FindMuonTauPair() 
 {
 //-----------------------------------------------------------------
 
-  return true;
+  //Find all possible pairs of muons and taus
+  vector< pair<int,int> > comb;
+  Int_t nmuons = muon_pt->size();
+  Int_t ntaus = tau_pt->size();
+  for(Int_t midx=0;midx<nmuons;++midx){
+    for(Int_t tidx=0;tidx<ntaus;++tidx){
+      comb.push_back(make_pair(midx,tidx));
+    }
+  }
+  const size_t numComb= comb.size();
+
+  //Find valid pairs based on delta r
+  vector<int> validPair(numComb, 0);
+  for(size_t i = 0; i < numComb; i++) {
+    const int i1 = comb.at(i).first;
+    const int i2 = comb.at(i).second;
+    if(isGoodMuon(i1) && isGoodTau(i2)) {
+      const float deltar = sqrt(
+				pow(muon_eta->at(i1) - tau_eta->at(i2), 2) +
+				pow(Helper::DeltaPhi(muon_phi->at(i1), tau_phi->at(i2)), 2));
+      if (deltar > 0.5) {
+	validPair[i] = 1;
+      }
+    }
+  }
+
+// Find best muon based on pt
+  int idx_1 = -1;
+  float maxPt = -1;
+  for(size_t i = 0; i < numComb; i++) {
+    if(validPair[i] == 0) continue;
+    const int tmp = comb.at(i).first;
+    if(maxPt < muon_pt->at(tmp)) {
+      maxPt = muon_pt->at(tmp);
+      idx_1 = tmp;
+    }
+  }
+
+// Find best tau based on iso
+  int idx_2 = -1;
+  float minIso = 999;
+  for(size_t i = 0; i < numComb; i++) {
+    if(validPair[i] == 0) continue;
+    if(int(comb.at(i).first) != idx_1) continue;
+    const int tmp = comb.at(i).second;
+    if(minIso > tau_reliso_all->at(tmp)) {
+      minIso = tau_reliso_all->at(tmp);
+      idx_2 = tmp;
+    }
+  }
+
+  vector<int> thegoodidx;
+  thegoodidx.push_back(idx_1);
+  thegoodidx.push_back(idx_2);
+
+  return thegoodidx;
   
 
 }//---------FindMuonTauPair
+
+
+
 
 
 //-----------------------------------------------------------------
