@@ -40,28 +40,25 @@ using namespace std;
 const std::string samplesBasePath = "";
 
 
-/*
- * Names of the datasets to be found in the base path and processed for the analysis
- */
-
-
-
 //book example histograms for specific variables
 //copy them in the constructor if you add more
-const int numberOfHistograms = 2;
+const int numberOfHistograms = 3;
 TH1F* dataRunB_npv = new TH1F("dataRunB_npv","Number of primary vertices",25,5,30);
 TH1F* dataRunC_npv = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
+TH1F* ZTT_npv = new TH1F("ZTT_npv","Number of primary vertices",25,5,30);
 
 
 
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
+const Int_t kMaxtriggermap = 5;
 
 class EventLoopAnalysisTemplate {
 public :
 	
    TTree          *fChain;   //!pointer to the analyzed TTree or TChain	
    TTree          *tvertex;
+   TTree          *ttrigger;
    //Add more trees for friendship
 
    Int_t           fCurrent; //!current Tree number in a TChain
@@ -76,6 +73,9 @@ public :
    UInt_t          luminosityBlock;
    ULong64_t	   event;
    Int_t           PV_npvs;
+   Int_t           triggermap_;
+   string          triggermap_first[kMaxtriggermap];
+   Int_t           triggermap_second[kMaxtriggermap];   //[triggermap_]
 
 
    // List of example branches
@@ -83,6 +83,10 @@ public :
    TBranch        *b_luminosityBlock;   //!
    TBranch        *b_event;   //!
    TBranch        *b_PV_npvs;   //!
+   TBranch        *b_triggermap_;   //!
+   TBranch        *b_triggermap_first;   //!
+   TBranch        *b_triggermap_second;   //!
+
 
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag);
@@ -95,6 +99,7 @@ public :
   virtual Bool_t   Notify();
   virtual void     Show(Long64_t entry = -1);
   void analysis();
+  bool MinimalSelection();
  
 };
 
@@ -105,9 +110,10 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
   labeltag = thelabel;
   
 
-  //Load histograms of interest to the object
+  //Load histograms of interest to the object for automatic looping
   hists[0] = dataRunB_npv;
   hists[1] = dataRunC_npv;
+  hists[2] = ZTT_npv;
 
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
@@ -123,9 +129,11 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
 
       //Get trees for friendship
       tvertex = (TTree*)f->Get("mypvertex/Events");
+      ttrigger = (TTree*)f->Get("mytriggers/Events");
       
       //Make friendship	
       tree->AddFriend(tvertex);
+      tree->AddFriend(ttrigger);
 	
    }
    Init(tree);
@@ -180,6 +188,9 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("luminosityBlock", &luminosityBlock, &b_luminosityBlock);
    fChain->SetBranchAddress("event", &event, &b_event);
    fChain->SetBranchAddress("PV_npvs", &PV_npvs, &b_PV_npvs);
+   fChain->SetBranchAddress("triggermap", &triggermap_, &b_triggermap_);
+   fChain->SetBranchAddress("triggermap.first", triggermap_first, &b_triggermap_first);
+   fChain->SetBranchAddress("triggermap.second", triggermap_second, &b_triggermap_second);
    Notify();
 }
 
@@ -242,10 +253,13 @@ void EventLoopAnalysisTemplate::analysis()
 //-----------------------------------------------------------------
 
   //cout<<"analysis() execution"<<endl;
+
+  if (!MinimalSelection()) return;
   
   //fill histograms
   Int_t histsize = sizeof(hists)/sizeof(hists[0]);
   for (Int_t j=0;j<histsize;++j){
+
     TString histname = TString(hists[j]->GetName());
     TString thelabel = TString(histname.Tokenize("_")->At(0)->GetName());
     TString thevar = TString(histname.Tokenize("_")->At(1)->GetName());
@@ -257,7 +271,19 @@ void EventLoopAnalysisTemplate::analysis()
   }
 
 
-}
+}//------analysis()
+
+/*
+ * Perform a selection on the minimal requirements of an event
+ */
+//-----------------------------------------------------------------
+bool EventLoopAnalysisTemplate::MinimalSelection()
+{
+//-----------------------------------------------------------------
+
+  return true;
+
+}//------MinimalSelection
 
 
 
@@ -274,9 +300,10 @@ int main()
   //sampleNames.push_back(make_pair("W3JetsToLNu","W3J"));
   //sampleNames.push_back(make_pair("TTbar","TT"));
   //sampleNames.push_back(make_pair("DYJetsToLL","ZLL"));
-  //sampleNames.push_back(make_pair("DYJetsToLL","ZTT"));
   sampleNames.push_back(make_pair("Run2012B_TauPlusX","dataRunB"));
   sampleNames.push_back(make_pair("Run2012C_TauPlusX","dataRunC"));
+  sampleNames.push_back(make_pair("DYJetsToLL","ZTT"));
+
 
 			
   //loop over sample files with names  defined above
@@ -301,6 +328,7 @@ int main()
   TFile* hfile = new TFile("histograms.root","RECREATE");
   dataRunB_npv->Write();
   dataRunC_npv->Write();
+  ZTT_npv->Write();
   hfile->Close();
   return 1;
 
