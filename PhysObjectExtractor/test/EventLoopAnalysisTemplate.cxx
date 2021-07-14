@@ -44,7 +44,7 @@ const std::string samplesBasePath = "";
 
 //book example histograms for specific variables
 //copy them in the constructor if you add more
-const int numberOfHistograms = 4;
+const int numberOfHistograms = 3;
 TH1F* dataRunB_npv = new TH1F("dataRunB_npv","Number of primary vertices",25,5,30);
 TH1F* dataRunC_npv = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
 TH1F* ZLL_npv = new TH1F("ZLL_npv","Number of primary vertices",25,5,30);
@@ -72,6 +72,7 @@ public :
    Int_t           fCurrent; //!current Tree number in a TChain
   TString          labeltag;
    TString         filename;
+  Float_t          theweight;
 
   //array to keep histograms to be written and easily loop over them
    TH1F            *hists[numberOfHistograms];
@@ -124,7 +125,7 @@ public :
    TBranch        *b_met_pt;   //!
    TBranch        *b_met_phi;   //!
 
-  EventLoopAnalysisTemplate(TString filename, TString labeltag);
+  EventLoopAnalysisTemplate(TString filename, TString labeltag, Float_t theweight);
   virtual ~EventLoopAnalysisTemplate();
   virtual Int_t    Cut(Long64_t entry);
   virtual Int_t    GetEntry(Long64_t entry);
@@ -180,18 +181,19 @@ float EventLoopAnalysisTemplate::compute_mt(float pt_1, float phi_1,
 
 
 
-EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString thelabel) : fChain(0)
+EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString thelabel, Float_t sampleweight) : fChain(0)
 {
   //Prepare some info for the object:
   filename = thefile;
   labeltag = thelabel;
+  theweight = sampleweight;
   
 
   //Load histograms of interest to the object for automatic looping
   hists[0] = dataRunB_npv;
   hists[1] = dataRunC_npv;
   hists[2] = ZLL_npv;
-  hists[3] = ZTT_npv;
+
 
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
@@ -353,7 +355,7 @@ void EventLoopAnalysisTemplate::Loop()
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
 	//Just an informative printout
-	if(jentry%1000 == 0) {
+	if(jentry%100000 == 0) {
 	      cout<<"Processed "<<jentry<<" events out of "<<nentries<<endl;
 	} 
        //cout<<"Load the current event"<<endl;
@@ -377,21 +379,37 @@ void EventLoopAnalysisTemplate::analysis()
 
   //minimal selection including trigger requirement
   if (!MinimalSelection()) return;
+
   //find at least a good muon
   if (!FindGoodMuons()) return;
+
   //find at least a good tau
   if (!FindGoodTaus()) return;
+
   //Find the best muon-tau pair and get indexes
   vector<int> GoodMuonTauPair = FindMuonTauPair();
   int idx_1 = GoodMuonTauPair[0];
   int idx_2 = GoodMuonTauPair[1];
   if (!(idx_1!=-1 && idx_2!=-1)) return;
+
   //Muon transverse mass cut for W+jets suppression
   if (!(compute_mt(muon_pt->at(idx_1),muon_phi->at(idx_1),met_pt,met_phi)<30)) return;
+
   //Require isolated muon for signal region
   if (!(muon_pfreliso03all->at(idx_1)<0.1)) return;
+
   //Require opposite charge for signal region
   if(!(muon_ch->at(idx_1)*tau_ch->at(idx_2)<0)) return;
+
+  //Apply a selection based on generator information about the tau
+  //if (labeltag == "ZTT"){
+  //  //Select genuine taus
+  //  if(!gen_match()) return;
+  //}
+  //if (labeltag == "ZLL"){
+  //  //Select fake taus
+  //  if (gen_match) return;
+  //}
   
 
   //fill histograms
@@ -403,7 +421,7 @@ void EventLoopAnalysisTemplate::analysis()
     TString thevar = TString(histname.Tokenize("_")->At(1)->GetName());
 
     if (thelabel == labeltag && thevar == "npv"){
-      hists[j]->Fill(PV_npvs);
+      hists[j]->Fill(PV_npvs,theweight);
     }
 
   }
@@ -629,33 +647,58 @@ int main()
 
   gROOT->ProcessLine("#include<map>");
 
-  vector< pair<string,string> > sampleNames;
-  //sampleNames.push_back(make_pair("GluGluToHToTauTau","ggH"));
-  //sampleNames.push_back(make_pair("VBF_HToTauTau","qqH"));
-  //sampleNames.push_back(make_pair("W1JetsToLNu","W1J"));
-  //sampleNames.push_back(make_pair("W2JetsToLNu","W2J"));
-  //sampleNames.push_back(make_pair("W3JetsToLNu","W3J"));
-  //sampleNames.push_back(make_pair("TTbar","TT"));
-  sampleNames.push_back(make_pair("Run2012B_TauPlusX","dataRunB"));
-  sampleNames.push_back(make_pair("Run2012C_TauPlusX","dataRunC"));
-  sampleNames.push_back(make_pair("DYJetsToLL","ZLL"));
-  sampleNames.push_back(make_pair("DYJetsToLL","ZTT"));
+  /*
+ * Compute event weights to be used for the respective datasets
+ *
+ * The event weight reweights the full dataset so that the sum of the weights
+ * is equal to the expected number of events in data. The expectation is given by
+ * multiplying the integrated luminosity of the data with the cross-section of
+ * the process in the datasets divided by the number of simulated events.
+ */
+//const float integratedLuminosity = 4.412 * 1000.0; // Run2012B only
+//const float integratedLuminosity = 7.055 * 1000.0; // Run2012C only
+ const float integratedLuminosity = 11.467 * 1000.0; // Run2012B+C
 
+ //const float ggH_w = 19.6 / 476963.0 * integratedLuminosity;
+ //const float qqH_w = 1.55 / 491653.0 * integratedLuminosity;
+ // const float TT_w = 225.2 / 6423106.0 * integratedLuminosity;
+ //const float W1J =  6381.2 / 29784800.0 * integratedLuminosity;
+ //const float W2J =  2039.8 / 30693853.0 * integratedLuminosity;
+ //const float W3J =  612.5 / 15241144.0 * integratedLuminosity;
+ const float dataRunB_w = 1.0;
+ const float dataRunC_w = 1.0;
+ const float ZLL_w = 3503.7 / 30458871.0 * integratedLuminosity;
+
+
+ map<string, pair<string,float> > sampleNames;
+ // sampleNames.insert(make_pair("GluGluToHToTauTau",make_pair("ggH",ggH_w)));
+ //sampleNames.insert(make_pair("VBF_HToTauTau",make_pair("qqH",qqH_w)));
+ //sampleNames.insert(make_pair("W1JetsToLNu",make_pair("W1J",W1J_w)));
+ //sampleNames.insert(make_pair("W2JetsToLNu",make_pair("W2J",W2J_w)));
+ //sampleNames.insert(make_pair("W3JetsToLNu",make_pair("W3J",W3J_w)));
+ //sampleNames.insert(make_pair(("TTbar",make_pair("TT",TT_w)));
+ sampleNames.insert(make_pair("Run2012B_TauPlusX",make_pair("dataRunB",dataRunB_w)));
+ sampleNames.insert(make_pair("Run2012C_TauPlusX",make_pair("dataRunC",dataRunC_w)));
+ sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZLL",ZLL_w)));
+ //sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZTT",ZTT_w)));
 
 			
   //loop over sample files with names  defined above
-  for(UInt_t j=0; j<sampleNames.size();++j){
-    TString samplename = sampleNames.at(j).first;
-    TString thelabel = sampleNames.at(j).second;
+ for(map< string,pair<string,float> >::iterator it=sampleNames.begin();
+     it!=sampleNames.end();it++){
+
+    TString samplename = it->first;
+    TString thelabel = it->second.first;
+    Float_t sampleweight = it->second.second;
   
-    cout << ">>> Processing sample " << samplename <<" with label "<<thelabel<<":" <<endl;
-    TStopwatch time;
-    time.Start();
+    cout << ">>> Processing sample " << samplename <<" with label "<<thelabel<<" and weight "<<sampleweight<<":" <<endl;
+    //TStopwatch time;
+    //time.Start();
  
     TString filename = samplesBasePath+samplename+".root";
     
     cout<<"Build the analysis object with file "<<filename<<endl;
-    EventLoopAnalysisTemplate mytemplate(filename,thelabel);
+    EventLoopAnalysisTemplate mytemplate(filename,thelabel,sampleweight);
 
     cout<<"Run the event loop"<<endl;
     mytemplate.Loop();
@@ -666,7 +709,6 @@ int main()
   dataRunB_npv->Write();
   dataRunC_npv->Write();
   ZLL_npv->Write();
-  ZTT_npv->Write();
   hfile->Close();
   return 0;
 
