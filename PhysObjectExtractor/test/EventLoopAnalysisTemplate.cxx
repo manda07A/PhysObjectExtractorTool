@@ -5,13 +5,16 @@
 // The template shows the structre of a potential analysis code
 // where more TTree friends can be added with more physics objects.
 //
+// The analysis part is based on the RDataFrame analysis example by Stefan Wunch:
+// https://github.com/cms-opendata-analyses/HiggsTauTauNanoAODOutreachAnalysis
+//
 // Done with ROOT version 5.32/00
 // from TTree Events/Events
 // found on file: myoutput.root
 //
 //
 // Compile me with:
-// g++ -g -O3 -Wall -Wextra -o EventLoopAnalysis EventLoopAnalysisTemplate.cxx $(root-config --cflags --libs)
+// g++ -std=c++11 -g -O3 -Wall -Wextra -o EventLoopAnalysis EventLoopAnalysisTemplate.cxx $(root-config --cflags --libs) -lGenVector
 /////////////////////////////////////////////////////////////////////
 
 //Include ROOT classes
@@ -25,6 +28,7 @@
 #include "TLatex.h"
 #include "TStopwatch.h"
 #include "Math/Vector4D.h"
+#include "Math/GenVector/GenVector_exception.h"
 //Include C++ classes
 #include <iostream>
 #include <vector>
@@ -44,11 +48,18 @@ const std::string samplesBasePath = "";
 
 //book example histograms for specific variables
 //copy them in the constructor if you add more
-const int numberOfHistograms = 3;
+const int numberOfHistograms = 9;
 TH1F* dataRunB_npv = new TH1F("dataRunB_npv","Number of primary vertices",25,5,30);
-TH1F* dataRunC_npv = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
+TH1F* dataRunB_m_vis = new TH1F("dataRunB_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* dataRunB_eta_2 = new TH1F("dataRunB_eta_2","Tau #eta",30, -2.3, 2.3);
+
+TH1F* dataRunC_npv  = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
+TH1F* dataRunC_m_vis = new TH1F("dataRunC_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* dataRunC_eta_2 = new TH1F("dataRunC_eta_2","Tau #eta",30, -2.3, 2.3);
+
 TH1F* ZLL_npv = new TH1F("ZLL_npv","Number of primary vertices",25,5,30);
-TH1F* ZTT_npv = new TH1F("ZTT_npv","Number of primary vertices",25,5,30);
+TH1F* ZLL_m_vis= new TH1F("ZLL_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* ZLL_eta_2= new TH1F("ZLL_eta_2","Tau #eta",30, -2.3, 2.3);
 
 //Requiered trigger
 string triggerRequest = "HLT_IsoMu17_eta2p1_LooseIsoPFTau20";
@@ -89,6 +100,7 @@ public :
    vector<float>   *muon_ch;
    vector<float>   *muon_tightid;
    vector<float>   *muon_pfreliso03all;
+  vector<float>   *muon_mass;
    vector<float>   *tau_pt;
    vector<float>   *tau_eta;
    vector<float>   *tau_phi;
@@ -98,6 +110,7 @@ public :
    vector<float>   *tau_idantieletight;
    vector<float>   *tau_idantimutight;
    vector<float>   *tau_reliso_all;
+   vector<float>   *tau_mass;
    Float_t         met_pt;
    Float_t         met_phi;
 
@@ -113,6 +126,7 @@ public :
    TBranch        *b_muon_ch;   //!
    TBranch        *b_muon_tightid;   //!
    TBranch        *b_muon_pfreliso03all;   //!
+   TBranch        *b_muon_mass;   //!
    TBranch        *b_tau_pt;   //!
    TBranch        *b_tau_eta;   //!
    TBranch        *b_tau_phi;   //!
@@ -122,12 +136,12 @@ public :
    TBranch        *b_tau_idantieletight;   //!
    TBranch        *b_tau_idantimutight;   //!
    TBranch        *b_tau_reliso_all;   //!
+   TBranch        *b_tau_mass;   //!
    TBranch        *b_met_pt;   //!
    TBranch        *b_met_phi;   //!
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag, Float_t theweight);
   virtual ~EventLoopAnalysisTemplate();
-  virtual Int_t    Cut(Long64_t entry);
   virtual Int_t    GetEntry(Long64_t entry);
   virtual Long64_t LoadTree(Long64_t entry);
   virtual void     Init(TTree *tree);
@@ -142,6 +156,7 @@ public :
   bool FindGoodTaus();
   std::vector<int> FindMuonTauPair();
   float compute_mt(float pt_1, float phi_1,float pt_met, float phi_met);
+  ROOT::Math::PtEtaPhiMVector get_p4(float pt, float eta, float phi, float mass);
  
 };
 
@@ -155,7 +170,7 @@ namespace Helper {
   float DeltaPhi(T v1, T v2, const T c = M_PI)
   {
 //-------------------------------------------------------------------------
-    float r = std::fmod(v2 - v1, 2.0 * c);
+    auto r = std::fmod(v2 - v1, 2.0 * c);
     if (r < -c) {
       r += 2.0 * c;
     }
@@ -168,13 +183,14 @@ namespace Helper {
 
 
 
+//transverse mass computation
 //-----------------------------------------------------------------
 float EventLoopAnalysisTemplate::compute_mt(float pt_1, float phi_1, 
 					    float pt_met, float phi_met)
 {
 //-----------------------------------------------------------------
 
-  const float dphi = Helper::DeltaPhi(phi_1, phi_met);
+  const auto dphi = Helper::DeltaPhi(phi_1, phi_met);
   return sqrt(2.0 * pt_1 * pt_met * (1.0 - cos(dphi)));
 
 }//-----compute_mt
@@ -191,8 +207,16 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
 
   //Load histograms of interest to the object for automatic looping
   hists[0] = dataRunB_npv;
-  hists[1] = dataRunC_npv;
-  hists[2] = ZLL_npv;
+  hists[1] = dataRunB_m_vis;
+  hists[2] = dataRunB_eta_2;
+
+  hists[3] = dataRunC_npv;
+  hists[4] = dataRunC_m_vis;
+  hists[5] = dataRunC_eta_2;
+
+  hists[6] = ZLL_npv;
+  hists[7] = ZLL_m_vis;
+  hists[8] = ZLL_eta_2;
 
 
 // if parameter tree is not specified (or zero), connect the file
@@ -275,6 +299,7 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    muon_ch = 0;
    muon_tightid = 0;
    muon_pfreliso03all = 0;
+   muon_mass = 0;
    tau_pt = 0;
    tau_eta = 0;
    tau_phi = 0;
@@ -284,6 +309,7 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    tau_idantieletight = 0;
    tau_idantimutight = 0;
    tau_reliso_all = 0;
+   tau_mass = 0;
 
    // Set branch addresses and branch pointers
    if (!tree) return;
@@ -304,6 +330,7 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("muon_ch", &muon_ch, &b_muon_ch);
    fChain->SetBranchAddress("muon_tightid", &muon_tightid, &b_muon_tightid);
    fChain->SetBranchAddress("muon_pfreliso03all", &muon_pfreliso03all, &b_muon_pfreliso03all);
+   fChain->SetBranchAddress("muon_mass", &muon_mass, &b_muon_mass);
    fChain->SetBranchAddress("tau_pt", &tau_pt, &b_tau_pt);
    fChain->SetBranchAddress("tau_eta", &tau_eta, &b_tau_eta);
    fChain->SetBranchAddress("tau_phi", &tau_phi, &b_tau_phi);
@@ -313,6 +340,7 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("tau_idantieletight", &tau_idantieletight, &b_tau_idantieletight);
    fChain->SetBranchAddress("tau_idantimutight", &tau_idantimutight, &b_tau_idantimutight);
    fChain->SetBranchAddress("tau_reliso_all", &tau_reliso_all, &b_tau_reliso_all);
+   fChain->SetBranchAddress("tau_mass", &tau_mass, &b_tau_mass);
    fChain->SetBranchAddress("met_pt", &met_pt, &b_met_pt);
    fChain->SetBranchAddress("met_phi", &met_phi, &b_met_phi);
    Notify();
@@ -336,14 +364,6 @@ void EventLoopAnalysisTemplate::Show(Long64_t entry)
 // If entry is not specified, print current entry
    if (!fChain) return;
    fChain->Show(entry);
-}
-
-Int_t EventLoopAnalysisTemplate::Cut(Long64_t entry)
-{
-// This function may be called from Loop.
-// returns  1 if entry is accepted.
-// returns -1 otherwise.
-   return 1;
 }
 
 void EventLoopAnalysisTemplate::Loop()
@@ -386,7 +406,7 @@ void EventLoopAnalysisTemplate::analysis()
   //find at least a good tau
   if (!FindGoodTaus()) return;
 
-  //Find the best muon-tau pair and get indexes
+  //Find the best muon-tau pair and get indexes (1 is muon, 2 is tau)
   vector<int> GoodMuonTauPair = FindMuonTauPair();
   int idx_1 = GoodMuonTauPair[0];
   int idx_2 = GoodMuonTauPair[1];
@@ -417,11 +437,22 @@ void EventLoopAnalysisTemplate::analysis()
   for (Int_t j=0;j<histsize;++j){
 
     TString histname = TString(hists[j]->GetName());
-    TString thelabel = TString(histname.Tokenize("_")->At(0)->GetName());
-    TString thevar = TString(histname.Tokenize("_")->At(1)->GetName());
+    TString thelabel = histname(0,histname.First("_"));
+    TString thevar = histname(histname.First("_")+1,histname.Sizeof());
 
-    if (thelabel == labeltag && thevar == "npv"){
-      hists[j]->Fill(PV_npvs,theweight);
+    if (thelabel == labeltag){ 
+      //primary vertices
+      if(thevar == "npv"){hists[j]->Fill(PV_npvs,theweight);}
+      //eta of taus
+      if(thevar == "eta_2"){hists[j]->Fill(tau_eta->at(idx_2),theweight);}
+      //visible mass
+      if(thevar == "m_vis"){
+	ROOT::Math::PtEtaPhiMVector p4_1(muon_pt->at(idx_1),muon_eta->at(idx_1),
+						  muon_phi->at(idx_1), muon_mass->at(idx_1));
+	ROOT::Math::PtEtaPhiMVector p4_2(tau_pt->at(idx_2),tau_eta->at(idx_2),
+						  tau_phi->at(idx_2), tau_mass->at(idx_2));
+	hists[j]->Fill(float((p4_1+p4_2).M()),theweight);
+      }
     }
 
   }
@@ -667,7 +698,8 @@ int main()
  //const float W3J =  612.5 / 15241144.0 * integratedLuminosity;
  const float dataRunB_w = 1.0;
  const float dataRunC_w = 1.0;
- const float ZLL_w = 3503.7 / 30458871.0 * integratedLuminosity;
+ // const float ZLL_w = 3503.7 / 30458871.0 * integratedLuminosity;
+ const float ZLL_w = 3503.7 / 439673.0 * integratedLuminosity;
 
 
  map<string, pair<string,float> > sampleNames;
@@ -706,9 +738,19 @@ int main()
   }
 
   TFile* hfile = new TFile("histograms.root","RECREATE");
+  
   dataRunB_npv->Write();
+  dataRunB_eta_2->Write();
+  dataRunB_m_vis->Write();
+  
   dataRunC_npv->Write();
+  dataRunC_eta_2->Write();
+  dataRunC_m_vis->Write();
+
   ZLL_npv->Write();
+  ZLL_eta_2->Write();
+  ZLL_m_vis->Write();
+
   hfile->Close();
   return 0;
 
