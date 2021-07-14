@@ -44,13 +44,14 @@ const std::string samplesBasePath = "";
 
 //book example histograms for specific variables
 //copy them in the constructor if you add more
-const int numberOfHistograms = 3;
+const int numberOfHistograms = 4;
 TH1F* dataRunB_npv = new TH1F("dataRunB_npv","Number of primary vertices",25,5,30);
 TH1F* dataRunC_npv = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
+TH1F* ZLL_npv = new TH1F("ZLL_npv","Number of primary vertices",25,5,30);
 TH1F* ZTT_npv = new TH1F("ZTT_npv","Number of primary vertices",25,5,30);
 
 //Requiered trigger
-string triggerRequest = "HLT_L2DoubleMu23_NoVertex";
+string triggerRequest = "HLT_IsoMu17_eta2p1_LooseIsoPFTau20";
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
@@ -64,6 +65,7 @@ public :
    TTree          *ttrigger;
   TTree           *tmuons;
   TTree           *ttaus;
+  TTree           *tmets;
 
    //Add more trees for friendship
 
@@ -83,7 +85,9 @@ public :
    vector<float>   *muon_pt;
    vector<float>   *muon_eta;
    vector<float>   *muon_phi;
+   vector<float>   *muon_ch;
    vector<float>   *muon_tightid;
+   vector<float>   *muon_pfreliso03all;
    vector<float>   *tau_pt;
    vector<float>   *tau_eta;
    vector<float>   *tau_phi;
@@ -93,7 +97,8 @@ public :
    vector<float>   *tau_idantieletight;
    vector<float>   *tau_idantimutight;
    vector<float>   *tau_reliso_all;
-  
+   Float_t         met_pt;
+   Float_t         met_phi;
 
    // List of example branches
    TBranch        *b_run;   //!
@@ -104,7 +109,9 @@ public :
    TBranch        *b_muon_pt;   //!
    TBranch        *b_muon_eta;   //!
    TBranch        *b_muon_phi;   //!
+   TBranch        *b_muon_ch;   //!
    TBranch        *b_muon_tightid;   //!
+   TBranch        *b_muon_pfreliso03all;   //!
    TBranch        *b_tau_pt;   //!
    TBranch        *b_tau_eta;   //!
    TBranch        *b_tau_phi;   //!
@@ -114,6 +121,8 @@ public :
    TBranch        *b_tau_idantieletight;   //!
    TBranch        *b_tau_idantimutight;   //!
    TBranch        *b_tau_reliso_all;   //!
+   TBranch        *b_met_pt;   //!
+   TBranch        *b_met_phi;   //!
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag);
   virtual ~EventLoopAnalysisTemplate();
@@ -131,6 +140,7 @@ public :
   bool FindGoodMuons();
   bool FindGoodTaus();
   std::vector<int> FindMuonTauPair();
+  float compute_mt(float pt_1, float phi_1,float pt_met, float phi_met);
  
 };
 
@@ -156,6 +166,20 @@ namespace Helper {
 }//-----------------Helper
 
 
+
+//-----------------------------------------------------------------
+float EventLoopAnalysisTemplate::compute_mt(float pt_1, float phi_1, 
+					    float pt_met, float phi_met)
+{
+//-----------------------------------------------------------------
+
+  const float dphi = Helper::DeltaPhi(phi_1, phi_met);
+  return sqrt(2.0 * pt_1 * pt_met * (1.0 - cos(dphi)));
+
+}//-----compute_mt
+
+
+
 EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString thelabel) : fChain(0)
 {
   //Prepare some info for the object:
@@ -166,7 +190,8 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
   //Load histograms of interest to the object for automatic looping
   hists[0] = dataRunB_npv;
   hists[1] = dataRunC_npv;
-  hists[2] = ZTT_npv;
+  hists[2] = ZLL_npv;
+  hists[3] = ZTT_npv;
 
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
@@ -186,12 +211,14 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
       tvertex = (TTree*)f->Get("mypvertex/Events");
       tmuons = (TTree*)f->Get("mymuons/Events");
       ttaus = (TTree*)f->Get("mytaus/Events");
+      tmets = (TTree*)f->Get("mymets/Events");
 
       //Make friendship	
       tree->AddFriend(tevents);
       tree->AddFriend(tvertex);
       tree->AddFriend(tmuons);
       tree->AddFriend(ttaus);
+      tree->AddFriend(tmets);
 
 	
    }
@@ -243,7 +270,9 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    muon_pt = 0;
    muon_eta = 0;
    muon_phi = 0;
+   muon_ch = 0;
    muon_tightid = 0;
+   muon_pfreliso03all = 0;
    tau_pt = 0;
    tau_eta = 0;
    tau_phi = 0;
@@ -270,7 +299,9 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("muon_pt", &muon_pt, &b_muon_pt);
    fChain->SetBranchAddress("muon_eta", &muon_eta, &b_muon_eta);
    fChain->SetBranchAddress("muon_phi", &muon_phi, &b_muon_phi);
+   fChain->SetBranchAddress("muon_ch", &muon_ch, &b_muon_ch);
    fChain->SetBranchAddress("muon_tightid", &muon_tightid, &b_muon_tightid);
+   fChain->SetBranchAddress("muon_pfreliso03all", &muon_pfreliso03all, &b_muon_pfreliso03all);
    fChain->SetBranchAddress("tau_pt", &tau_pt, &b_tau_pt);
    fChain->SetBranchAddress("tau_eta", &tau_eta, &b_tau_eta);
    fChain->SetBranchAddress("tau_phi", &tau_phi, &b_tau_phi);
@@ -280,6 +311,8 @@ void EventLoopAnalysisTemplate::Init(TTree *tree)
    fChain->SetBranchAddress("tau_idantieletight", &tau_idantieletight, &b_tau_idantieletight);
    fChain->SetBranchAddress("tau_idantimutight", &tau_idantimutight, &b_tau_idantimutight);
    fChain->SetBranchAddress("tau_reliso_all", &tau_reliso_all, &b_tau_reliso_all);
+   fChain->SetBranchAddress("met_pt", &met_pt, &b_met_pt);
+   fChain->SetBranchAddress("met_phi", &met_phi, &b_met_phi);
    Notify();
 }
 
@@ -341,12 +374,26 @@ void EventLoopAnalysisTemplate::analysis()
 //-----------------------------------------------------------------
 
   //cout<<"analysis() execution"<<endl;
+
+  //minimal selection including trigger requirement
   if (!MinimalSelection()) return;
+  //find at least a good muon
   if (!FindGoodMuons()) return;
+  //find at least a good tau
   if (!FindGoodTaus()) return;
+  //Find the best muon-tau pair and get indexes
   vector<int> GoodMuonTauPair = FindMuonTauPair();
-  if (GoodMuonTauPair[0]==-1 && GoodMuonTauPair[1]==-1) return;
+  int idx_1 = GoodMuonTauPair[0];
+  int idx_2 = GoodMuonTauPair[1];
+  if (!(idx_1!=-1 && idx_2!=-1)) return;
+  //Muon transverse mass cut for W+jets suppression
+  if (!(compute_mt(muon_pt->at(idx_1),muon_phi->at(idx_1),met_pt,met_phi)<30)) return;
+  //Require isolated muon for signal region
+  if (!(muon_pfreliso03all->at(idx_1)<0.1)) return;
+  //Require opposite charge for signal region
+  if(!(muon_ch->at(idx_1)*tau_ch->at(idx_2)<0)) return;
   
+
   //fill histograms
   Int_t histsize = sizeof(hists)/sizeof(hists[0]);
   for (Int_t j=0;j<histsize;++j){
@@ -570,6 +617,11 @@ std::vector<int> EventLoopAnalysisTemplate::FindMuonTauPair()
 
 
 
+
+
+
+
+
 //-----------------------------------------------------------------
 int main()
 {
@@ -584,9 +636,9 @@ int main()
   //sampleNames.push_back(make_pair("W2JetsToLNu","W2J"));
   //sampleNames.push_back(make_pair("W3JetsToLNu","W3J"));
   //sampleNames.push_back(make_pair("TTbar","TT"));
-  //sampleNames.push_back(make_pair("DYJetsToLL","ZLL"));
   sampleNames.push_back(make_pair("Run2012B_TauPlusX","dataRunB"));
   sampleNames.push_back(make_pair("Run2012C_TauPlusX","dataRunC"));
+  sampleNames.push_back(make_pair("DYJetsToLL","ZLL"));
   sampleNames.push_back(make_pair("DYJetsToLL","ZTT"));
 
 
@@ -613,6 +665,7 @@ int main()
   TFile* hfile = new TFile("histograms.root","RECREATE");
   dataRunB_npv->Write();
   dataRunC_npv->Write();
+  ZLL_npv->Write();
   ZTT_npv->Write();
   hfile->Close();
   return 0;
