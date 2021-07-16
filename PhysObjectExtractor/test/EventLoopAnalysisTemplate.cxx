@@ -43,7 +43,7 @@ using namespace std;
  * Base path to local filesystem or to EOS containing the datasets
  */
 //const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/derived-data/AOD2NanoAODOutreachTool/";
-const std::string samplesBasePath = "";
+const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/upload/od-workshop/ws2021/";
 
 
 //book example histograms for specific variables
@@ -222,32 +222,28 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
    TTree* tree = 0;
-   if (tree == 0) {
-      TFile *f = (TFile*)gROOT->GetListOfFiles()->FindObject(filename);
-      if (!f || !f->IsOpen()) {
-         f = new TFile(filename);
-      }
-      //always, by default, use mytrigger as starting directory/tree
-      //because it is the most complex
-      TDirectory * dir = (TDirectory*)f->Get(filename+":/mytriggers");
-      dir->GetObject("Events",tree);
+   TFile *f = TFile::Open(filename);
+   //always, by default, use mytrigger as starting directory/tree
+   //because it is the most complex
+   //TDirectory * dir = (TDirectory*)f->Get(filename+":/mytriggers");
+   tree = (TTree*)f->Get("mytriggers/Events");
+   cout<<"flag 2"<<endl;
+   
+   //Get trees for friendship
+   tevents = (TTree*)f->Get("myevents/Events");
+   tvertex = (TTree*)f->Get("mypvertex/Events");
+   tmuons = (TTree*)f->Get("mymuons/Events");
+   ttaus = (TTree*)f->Get("mytaus/Events");
+   tmets = (TTree*)f->Get("mymets/Events");
+   
+   
+   //Make friendship	
+   tree->AddFriend(tevents);
+   tree->AddFriend(tvertex);
+   tree->AddFriend(tmuons);
+   tree->AddFriend(ttaus);
+   tree->AddFriend(tmets);
 
-      //Get trees for friendship
-      tevents = (TTree*)f->Get("myevents/Events");
-      tvertex = (TTree*)f->Get("mypvertex/Events");
-      tmuons = (TTree*)f->Get("mymuons/Events");
-      ttaus = (TTree*)f->Get("mytaus/Events");
-      tmets = (TTree*)f->Get("mymets/Events");
-
-      //Make friendship	
-      tree->AddFriend(tevents);
-      tree->AddFriend(tvertex);
-      tree->AddFriend(tmuons);
-      tree->AddFriend(ttaus);
-      tree->AddFriend(tmets);
-
-	
-   }
    Init(tree);
 }
 
@@ -375,7 +371,7 @@ void EventLoopAnalysisTemplate::Loop()
     Long64_t nbytes = 0, nb = 0;
     for (Long64_t jentry=0; jentry<nentries;jentry++) {
 	//Just an informative printout
-	if(jentry%100000 == 0) {
+	if(jentry%1000 == 0) {
 	      cout<<"Processed "<<jentry<<" events out of "<<nentries<<endl;
 	} 
        //cout<<"Load the current event"<<endl;
@@ -710,8 +706,8 @@ int main()
  //sampleNames.insert(make_pair("W3JetsToLNu",make_pair("W3J",W3J_w)));
  //sampleNames.insert(make_pair(("TTbar",make_pair("TT",TT_w)));
  sampleNames.insert(make_pair("Run2012B_TauPlusX",make_pair("dataRunB",dataRunB_w)));
- sampleNames.insert(make_pair("Run2012C_TauPlusX",make_pair("dataRunC",dataRunC_w)));
- sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZLL",ZLL_w)));
+ //sampleNames.insert(make_pair("Run2012C_TauPlusX",make_pair("dataRunC",dataRunC_w)));
+ //sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZLL",ZLL_w)));
  //sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZTT",ZTT_w)));
 
 			
