@@ -10,6 +10,8 @@ ROOT.gROOT.SetBatch(True)
 # Declare a human-readable label for each variable
 labels = {
         "npv": "Number of primary vertices",
+        "eta_2": "Tau #eta",
+        "m_vis": "Visible di-tau mass / GeV",
         }
 
 # Specify the color for each process
@@ -20,7 +22,6 @@ colors = {
         "W": ROOT.TColor.GetColor(222, 90, 106),
         "QCD":  ROOT.TColor.GetColor(250, 202, 255),
         "ZLL": ROOT.TColor.GetColor(100, 192, 232),
-        "ZTT": ROOT.TColor.GetColor(248, 206, 104),
         }
 
 # Retrieve a histogram from the input file based on the process and the variable
@@ -95,6 +96,17 @@ def main(variable):
 
 
     # Simulation
+    ggH = getHistogram(tfile, "ggH", variable)
+    qqH = getHistogram(tfile, "qqH", variable)
+
+    W = getHistogram(tfile, "W1J", variable)
+    W2J = getHistogram(tfile, "W2J", variable)
+    W3J = getHistogram(tfile, "W3J", variable)
+    W.Add(W2J)
+    W.Add(W3J)
+
+    TT = getHistogram(tfile, "TT", variable)
+
     ZLL = getHistogram(tfile, "ZLL", variable)
 
     # Data
@@ -102,16 +114,40 @@ def main(variable):
     dataRunC = getHistogram(tfile, "dataRunC", variable)
     data.Add(dataRunC)
 
+    # Data-driven QCD estimation
+    QCD = getHistogram(tfile, "dataRunB", variable, "_cr")
+    QCDRunC = getHistogram(tfile, "dataRunC", variable, "_cr")
+    QCD.Add(QCDRunC)
+    for name in ["W1J", "W2J", "W3J", "TT", "ZLL"]:
+        ss = getHistogram(tfile, name, variable, "_cr")
+        QCD.Add(ss, -1.0)
+    for i in range(1, QCD.GetNbinsX() + 1):
+        if QCD.GetBinContent(i) < 0.0:
+            QCD.SetBinContent(i, 0.0)
+    QCDScaleFactor = 0.80
+    QCD.Scale(QCDScaleFactor)
+
     # Draw histograms
     data.SetMarkerStyle(20)
     data.SetLineColor(ROOT.kBlack)
-    
-    for x, l in [(ZLL, "ZLL")]:
+    ggH.SetLineColor(colors["ggH"])
+    qqH.SetLineColor(colors["qqH"])
+
+    scale_ggH = 10.0
+    ggH.Scale(scale_ggH)
+    scale_qqH = 100.0
+    qqH.Scale(scale_qqH)
+
+    for x in [ggH, qqH]:
+        x.SetLineWidth(3)
+
+    for x, l in [(QCD, "QCD"), (TT, "TT"), (ZLL, "ZLL"), (W, "W")]:
         x.SetLineWidth(0)
         x.SetFillColor(colors[l])
+    
         
     stack = ROOT.THStack("", "")
-    for x in [ZLL]:
+    for x in [QCD, TT, W, ZLL]:
         stack.Add(x)
 
     c = ROOT.TCanvas("", "", 600, 600)
@@ -126,15 +162,24 @@ def main(variable):
     stack.SetMaximum(max(stack.GetMaximum(), data.GetMaximum()) * 1.4)
     stack.SetMinimum(1.0)
 
+    ggH.Draw("HIST SAME")
+    qqH.Draw("HIST SAME")
+
     data.Draw("E1P SAME")
     
     # Add legend
     legend = ROOT.TLegend(0.4, 0.73, 0.90, 0.88)
     legend.SetNColumns(2)
     legend.AddEntry(ZLL, "Z#rightarrowll", "f")
+    legend.AddEntry(W, "W+jets", "f")
+    legend.AddEntry(TT, "t#bar{t}", "f")
+    legend.AddEntry(QCD, "QCD multijet", "f")
+    legend.AddEntry(ggH, "gg#rightarrowH (x%.0f)"%scale_ggH, "l")
+    legend.AddEntry(qqH, "qq#rightarrowH (x%.0f)"%scale_qqH, "l")
     legend.AddEntry(data, "Data", "lep")
     legend.SetBorderSize(0)
     legend.Draw()
+
 
     # Add title
     latex = ROOT.TLatex()

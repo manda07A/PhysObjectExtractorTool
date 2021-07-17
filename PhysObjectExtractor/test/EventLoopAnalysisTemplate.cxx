@@ -42,24 +42,94 @@ using namespace std;
 /*
  * Base path to local filesystem or to EOS containing the datasets
  */
-//const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/derived-data/AOD2NanoAODOutreachTool/";
-const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/upload/od-workshop/ws2021/";
+//const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/upload/od-workshop/ws2021/v5/";
+const std::string samplesBasePath = "v10/";
 
 
 //book example histograms for specific variables
 //copy them in the constructor if you add more
-const int numberOfHistograms = 9;
+const int nhists = 27;
+
+//Histograms for signal region
 TH1F* dataRunB_npv = new TH1F("dataRunB_npv","Number of primary vertices",25,5,30);
 TH1F* dataRunB_m_vis = new TH1F("dataRunB_m_vis","Visible di-tau mass / GeV",30, 20, 140);
 TH1F* dataRunB_eta_2 = new TH1F("dataRunB_eta_2","Tau #eta",30, -2.3, 2.3);
+
 
 TH1F* dataRunC_npv  = new TH1F("dataRunC_npv","Number of primary vertices",25,5,30);
 TH1F* dataRunC_m_vis = new TH1F("dataRunC_m_vis","Visible di-tau mass / GeV",30, 20, 140);
 TH1F* dataRunC_eta_2 = new TH1F("dataRunC_eta_2","Tau #eta",30, -2.3, 2.3);
 
+
 TH1F* ZLL_npv = new TH1F("ZLL_npv","Number of primary vertices",25,5,30);
 TH1F* ZLL_m_vis= new TH1F("ZLL_m_vis","Visible di-tau mass / GeV",30, 20, 140);
 TH1F* ZLL_eta_2= new TH1F("ZLL_eta_2","Tau #eta",30, -2.3, 2.3);
+
+TH1F* TT_npv = new TH1F("TT_npv","Number of primary vertices",25,5,30);
+TH1F* TT_m_vis= new TH1F("TT_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* TT_eta_2= new TH1F("TT_eta_2","Tau #eta",30, -2.3, 2.3);
+
+TH1F* W3J_npv = new TH1F("W3J_npv","Number of primary vertices",25,5,30);
+TH1F* W3J_m_vis= new TH1F("W3J_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* W3J_eta_2= new TH1F("W3J_eta_2","Tau #eta",30, -2.3, 2.3);
+
+TH1F* W2J_npv = new TH1F("W2J_npv","Number of primary vertices",25,5,30);
+TH1F* W2J_m_vis= new TH1F("W2J_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* W2J_eta_2= new TH1F("W2J_eta_2","Tau #eta",30, -2.3, 2.3);
+
+TH1F* W1J_npv = new TH1F("W1J_npv","Number of primary vertices",25,5,30);
+TH1F* W1J_m_vis= new TH1F("W1J_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* W1J_eta_2= new TH1F("W1J_eta_2","Tau #eta",30, -2.3, 2.3);
+
+TH1F* qqH_npv = new TH1F("qqH_npv","Number of primary vertices",25,5,30);
+TH1F* qqH_m_vis= new TH1F("qqH_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* qqH_eta_2= new TH1F("qqH_eta_2","Tau #eta",30, -2.3, 2.3);
+
+TH1F* ggH_npv = new TH1F("ggH_npv","Number of primary vertices",25,5,30);
+TH1F* ggH_m_vis= new TH1F("ggH_m_vis","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* ggH_eta_2= new TH1F("ggH_eta_2","Tau #eta",30, -2.3, 2.3);
+
+
+//Histograms for control region
+TH1F* dataRunB_npv_cr = new TH1F("dataRunB_npv_cr","Number of primary vertices",25,5,30);
+TH1F* dataRunB_m_vis_cr = new TH1F("dataRunB_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* dataRunB_eta_2_cr = new TH1F("dataRunB_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* dataRunC_npv_cr = new TH1F("dataRunC_npv_cr","Number of primary vertices",25,5,30);
+TH1F* dataRunC_m_vis_cr = new TH1F("dataRunC_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* dataRunC_eta_2_cr = new TH1F("dataRunC_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* ZLL_npv_cr = new TH1F("ZLL_npv_cr","Number of primary vertices",25,5,30);
+TH1F* ZLL_m_vis_cr = new TH1F("ZLL_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* ZLL_eta_2_cr = new TH1F("ZLL_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* TT_npv_cr = new TH1F("TT_npv_cr","Number of primary vertices",25,5,30);
+TH1F* TT_m_vis_cr = new TH1F("TT_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* TT_eta_2_cr = new TH1F("TT_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* W3J_npv_cr = new TH1F("W3J_npv_cr","Number of primary vertices",25,5,30);
+TH1F* W3J_m_vis_cr = new TH1F("W3J_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* W3J_eta_2_cr = new TH1F("W3J_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* W2J_npv_cr = new TH1F("W2J_npv_cr","Number of primary vertices",25,5,30);
+TH1F* W2J_m_vis_cr = new TH1F("W2J_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* W2J_eta_2_cr = new TH1F("W2J_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* W1J_npv_cr = new TH1F("W1J_npv_cr","Number of primary vertices",25,5,30);
+TH1F* W1J_m_vis_cr = new TH1F("W1J_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* W1J_eta_2_cr = new TH1F("W1J_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* qqH_npv_cr = new TH1F("qqH_npv_cr","Number of primary vertices",25,5,30);
+TH1F* qqH_m_vis_cr = new TH1F("qqH_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* qqH_eta_2_cr = new TH1F("qqH_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+TH1F* ggH_npv_cr = new TH1F("ggH_npv_cr","Number of primary vertices",25,5,30);
+TH1F* ggH_m_vis_cr = new TH1F("ggH_m_vis_cr","Visible di-tau mass / GeV",30, 20, 140);
+TH1F* ggH_eta_2_cr = new TH1F("ggH_eta_2_cr","Tau #eta",30, -2.3, 2.3);
+
+
+
+
 
 //Requiered trigger
 string triggerRequest = "HLT_IsoMu17_eta2p1_LooseIsoPFTau20";
@@ -70,75 +140,86 @@ string triggerRequest = "HLT_IsoMu17_eta2p1_LooseIsoPFTau20";
 class EventLoopAnalysisTemplate {
 public :
 	
-   TTree          *fChain;   //!pointer to the analyzed TTree or TChain	
+  TTree          *fChain;   //!pointer to the analyzed TTree or TChain	
   TTree          *tevents;
-   TTree          *tvertex;
-   TTree          *ttrigger;
+  TTree          *tvertex;
+  TTree          *ttrigger;
   TTree           *tmuons;
   TTree           *ttaus;
   TTree           *tmets;
 
-   //Add more trees for friendship
-
-   Int_t           fCurrent; //!current Tree number in a TChain
+  //cut yield counters
+  Int_t counter_ms;
+  Int_t counter_gm;
+  Int_t counter_gt;
+  Int_t counter_pair;
+  Int_t counter_tm;
+  Int_t counter_iso;
+  Int_t counter_ch;
+  
+  
+  //Add more trees for friendship
+  
+  Int_t           fCurrent; //!current Tree number in a TChain
   TString          labeltag;
-   TString         filename;
+  TString         filename;
   Float_t          theweight;
-
+  
   //array to keep histograms to be written and easily loop over them
-   TH1F            *hists[numberOfHistograms];
-
-   // Declaration of example leaf types
-   Int_t           run;
-   UInt_t          luminosityBlock;
-   ULong64_t	   event;
-   Int_t           PV_npvs;
-   std::map<std::string, int> *triggermap;
-   vector<float>   *muon_pt;
-   vector<float>   *muon_eta;
-   vector<float>   *muon_phi;
-   vector<float>   *muon_ch;
-   vector<float>   *muon_tightid;
-   vector<float>   *muon_pfreliso03all;
+  TH1F            *hists[nhists];
+  TH1F            *hists_cr[nhists];
+  
+  // Declaration of example leaf types
+  Int_t           run;
+  UInt_t          luminosityBlock;
+  ULong64_t	   event;
+  Int_t           PV_npvs;
+  std::map<std::string, int> *triggermap;
+  vector<float>   *muon_pt;
+  vector<float>   *muon_eta;
+  vector<float>   *muon_phi;
+  vector<float>   *muon_ch;
+  vector<float>   *muon_tightid;
+  vector<float>   *muon_pfreliso03all;
   vector<float>   *muon_mass;
-   vector<float>   *tau_pt;
-   vector<float>   *tau_eta;
-   vector<float>   *tau_phi;
-   vector<float>   *tau_ch;
-   vector<float>   *tau_iddecaymode;
-   vector<float>   *tau_idisotight;
-   vector<float>   *tau_idantieletight;
-   vector<float>   *tau_idantimutight;
-   vector<float>   *tau_reliso_all;
-   vector<float>   *tau_mass;
-   Float_t         met_pt;
-   Float_t         met_phi;
-
-   // List of example branches
-   TBranch        *b_run;   //!
-   TBranch        *b_luminosityBlock;   //!
-   TBranch        *b_event;   //!
-   TBranch        *b_PV_npvs;   //!
-   TBranch        *b_triggermap;   //!
-   TBranch        *b_muon_pt;   //!
-   TBranch        *b_muon_eta;   //!
-   TBranch        *b_muon_phi;   //!
-   TBranch        *b_muon_ch;   //!
-   TBranch        *b_muon_tightid;   //!
-   TBranch        *b_muon_pfreliso03all;   //!
-   TBranch        *b_muon_mass;   //!
-   TBranch        *b_tau_pt;   //!
-   TBranch        *b_tau_eta;   //!
-   TBranch        *b_tau_phi;   //!
-   TBranch        *b_tau_ch;   //!
-   TBranch        *b_tau_iddecaymode;   //!
-   TBranch        *b_tau_idisotight;   //!
-   TBranch        *b_tau_idantieletight;   //!
-   TBranch        *b_tau_idantimutight;   //!
-   TBranch        *b_tau_reliso_all;   //!
-   TBranch        *b_tau_mass;   //!
-   TBranch        *b_met_pt;   //!
-   TBranch        *b_met_phi;   //!
+  vector<float>   *tau_pt;
+  vector<float>   *tau_eta;
+  vector<float>   *tau_phi;
+  vector<float>   *tau_ch;
+  vector<float>   *tau_iddecaymode;
+  vector<float>   *tau_idisotight;
+  vector<float>   *tau_idantieletight;
+  vector<float>   *tau_idantimutight;
+  vector<float>   *tau_reliso_all;
+  vector<float>   *tau_mass;
+  Float_t         met_pt;
+  Float_t         met_phi;
+  
+  // List of example branches
+  TBranch        *b_run;   //!
+  TBranch        *b_luminosityBlock;   //!
+  TBranch        *b_event;   //!
+  TBranch        *b_PV_npvs;   //!
+  TBranch        *b_triggermap;   //!
+  TBranch        *b_muon_pt;   //!
+  TBranch        *b_muon_eta;   //!
+  TBranch        *b_muon_phi;   //!
+  TBranch        *b_muon_ch;   //!
+  TBranch        *b_muon_tightid;   //!
+  TBranch        *b_muon_pfreliso03all;   //!
+  TBranch        *b_muon_mass;   //!
+  TBranch        *b_tau_pt;   //!
+  TBranch        *b_tau_eta;   //!
+  TBranch        *b_tau_phi;   //!
+  TBranch        *b_tau_ch;   //!
+  TBranch        *b_tau_iddecaymode;   //!
+  TBranch        *b_tau_idisotight;   //!
+  TBranch        *b_tau_idantieletight;   //!
+  TBranch        *b_tau_idantimutight;   //!
+  TBranch        *b_tau_reliso_all;   //!
+  TBranch        *b_tau_mass;   //!
+  TBranch        *b_met_pt;   //!
+  TBranch        *b_met_phi;   //!
 
   EventLoopAnalysisTemplate(TString filename, TString labeltag, Float_t theweight);
   virtual ~EventLoopAnalysisTemplate();
@@ -205,7 +286,7 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
   theweight = sampleweight;
   
 
-  //Load histograms of interest to the object for automatic looping
+  //Load histograms for signal region
   hists[0] = dataRunB_npv;
   hists[1] = dataRunB_m_vis;
   hists[2] = dataRunB_eta_2;
@@ -218,6 +299,67 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
   hists[7] = ZLL_m_vis;
   hists[8] = ZLL_eta_2;
 
+  hists[9] = TT_npv;
+  hists[10] = TT_m_vis;
+  hists[11] = TT_eta_2;
+
+  hists[12] = W3J_npv;
+  hists[13] = W3J_m_vis;
+  hists[14] = W3J_eta_2;
+
+  hists[15] = W2J_npv;
+  hists[16] = W2J_m_vis;
+  hists[17] = W2J_eta_2;
+
+  hists[18] = W1J_npv;
+  hists[19] = W1J_m_vis;
+  hists[20] = W1J_eta_2;
+
+  hists[21] = qqH_npv;
+  hists[22] = qqH_m_vis;
+  hists[23] = qqH_eta_2;
+
+  hists[24] = ggH_npv;
+  hists[25] = ggH_m_vis;
+  hists[26] = ggH_eta_2;
+
+  //Load histograms for control region
+  hists_cr[0] = dataRunB_npv;
+  hists_cr[1] = dataRunB_m_vis;
+  hists_cr[2] = dataRunB_eta_2;
+
+  hists_cr[3] = dataRunC_npv;
+  hists_cr[4] = dataRunC_m_vis;
+  hists_cr[5] = dataRunC_eta_2;
+
+  hists_cr[6] = ZLL_npv;
+  hists_cr[7] = ZLL_m_vis;
+  hists_cr[8] = ZLL_eta_2;
+
+  hists_cr[9] = TT_npv;
+  hists_cr[10] = TT_m_vis;
+  hists_cr[11] = TT_eta_2;
+
+  hists_cr[12] = W3J_npv;
+  hists_cr[13] = W3J_m_vis;
+  hists_cr[14] = W3J_eta_2;
+
+  hists_cr[15] = W2J_npv;
+  hists_cr[16] = W2J_m_vis;
+  hists_cr[17] = W2J_eta_2;
+
+  hists_cr[18] = W1J_npv;
+  hists_cr[19] = W1J_m_vis;
+  hists_cr[20] = W1J_eta_2;
+
+  hists_cr[21] = qqH_npv;
+  hists_cr[22] = qqH_m_vis;
+  hists_cr[23] = qqH_eta_2;
+
+  hists_cr[24] = ggH_npv;
+  hists_cr[25] = ggH_m_vis;
+  hists_cr[26] = ggH_eta_2;
+
 
 // if parameter tree is not specified (or zero), connect the file
 // used to generate this class and read the Tree.
@@ -227,7 +369,6 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
    //because it is the most complex
    //TDirectory * dir = (TDirectory*)f->Get(filename+":/mytriggers");
    tree = (TTree*)f->Get("mytriggers/Events");
-   cout<<"flag 2"<<endl;
    
    //Get trees for friendship
    tevents = (TTree*)f->Get("myevents/Events");
@@ -366,6 +507,15 @@ void EventLoopAnalysisTemplate::Loop()
 {
   if (fChain == 0) return;
 
+  //Keep track of cuts efficiencies
+  counter_ms = 0;
+  counter_gm = 0;
+  counter_gt = 0;
+  counter_pair = 0;
+  counter_tm = 0;
+  counter_iso = 0;
+  counter_ch = 0;
+
     Long64_t nentries = fChain->GetEntriesFast();
 
     Long64_t nbytes = 0, nb = 0;
@@ -374,15 +524,24 @@ void EventLoopAnalysisTemplate::Loop()
 	if(jentry%1000 == 0) {
 	      cout<<"Processed "<<jentry<<" events out of "<<nentries<<endl;
 	} 
+	//if(jentry==4000){return;}
        //cout<<"Load the current event"<<endl;
        Long64_t ientry = LoadTree(jentry);
        if (ientry < 0) break;
        nb = fChain->GetEntry(jentry);   nbytes += nb;
-       // if (Cut(ientry) < 0) continue;
-
+       
        analysis();
 
     }
+
+    //Print cut yields:
+    cout<<"counter_ms = "<<counter_ms<<": "<<counter_ms*100/float(nentries)<<"%"<<endl;
+    cout<<"counter_gm = "<<counter_gm<<": "<<counter_gm*100/float(nentries)<<"%"<<endl;
+    cout<<"counter_gt = "<<counter_gt<<": "<<counter_gt*100/float(nentries)<<"%"<<endl;
+    cout<<"counter_pair = "<<counter_pair<<": "<<counter_pair*100/float(nentries)<<"%"<<endl;
+    cout<<"counter_tm = "<<counter_tm<<": "<<counter_tm*100/float(nentries)<<"%"<<endl;
+    cout<<"counter_iso = "<<counter_iso<<": "<<counter_iso*100/float(nentries)<<"%"<<endl;
+    cout<<"counter_ch = "<<counter_ch<<": "<<counter_ch*100/float(nentries)<<"%"<<endl;
 }
 
 
@@ -395,63 +554,84 @@ void EventLoopAnalysisTemplate::analysis()
 
   //minimal selection including trigger requirement
   if (!MinimalSelection()) return;
+  counter_ms++;
 
   //find at least a good muon
   if (!FindGoodMuons()) return;
+  counter_gm++;
 
   //find at least a good tau
   if (!FindGoodTaus()) return;
+  counter_gt++;
 
   //Find the best muon-tau pair and get indexes (1 is muon, 2 is tau)
   vector<int> GoodMuonTauPair = FindMuonTauPair();
   int idx_1 = GoodMuonTauPair[0];
   int idx_2 = GoodMuonTauPair[1];
   if (!(idx_1!=-1 && idx_2!=-1)) return;
+    counter_pair++;
 
   //Muon transverse mass cut for W+jets suppression
   if (!(compute_mt(muon_pt->at(idx_1),muon_phi->at(idx_1),met_pt,met_phi)<30)) return;
+  counter_tm++;
 
   //Require isolated muon for signal region
   if (!(muon_pfreliso03all->at(idx_1)<0.1)) return;
+  counter_iso++;
 
-  //Require opposite charge for signal region
-  if(!(muon_ch->at(idx_1)*tau_ch->at(idx_2)<0)) return;
+  //Require opposite charge for control or signal region
+  if(muon_ch->at(idx_1)*tau_ch->at(idx_2)>0){ 
+      counter_ch++;
+    //fill histograms for control region
+      Int_t hists_crsize = sizeof(hists_cr)/sizeof(hists_cr[0]);
+      for (Int_t j=0;j<hists_crsize;++j){
+	
+	TString histname = TString(hists_cr[j]->GetName());
+	TString thelabel = histname(0,histname.First("_"));
+	TString thevar = histname(histname.First("_")+1,histname.Sizeof());
+	
+	if (thelabel == labeltag){ 
+	  //primary vertices
+	  if(thevar == "npv"){hists_cr[j]->Fill(PV_npvs,theweight);}
+	  //eta of taus
+	  if(thevar == "eta_2"){hists_cr[j]->Fill(tau_eta->at(idx_2),theweight);}
+	  //visible mass
+	  if(thevar == "m_vis"){
+	    ROOT::Math::PtEtaPhiMVector p4_1(muon_pt->at(idx_1),muon_eta->at(idx_1),
+					     muon_phi->at(idx_1), muon_mass->at(idx_1));
+	    ROOT::Math::PtEtaPhiMVector p4_2(tau_pt->at(idx_2),tau_eta->at(idx_2),
+					     tau_phi->at(idx_2), tau_mass->at(idx_2));
+	    hists_cr[j]->Fill(float((p4_1+p4_2).M()),theweight);
+	  }
+	}
+      }
+  }
 
-  //Apply a selection based on generator information about the tau
-  //if (labeltag == "ZTT"){
-  //  //Select genuine taus
-  //  if(!gen_match()) return;
-  //}
-  //if (labeltag == "ZLL"){
-  //  //Select fake taus
-  //  if (gen_match) return;
-  //}
-  
-
-  //fill histograms
-  Int_t histsize = sizeof(hists)/sizeof(hists[0]);
-  for (Int_t j=0;j<histsize;++j){
-
-    TString histname = TString(hists[j]->GetName());
-    TString thelabel = histname(0,histname.First("_"));
-    TString thevar = histname(histname.First("_")+1,histname.Sizeof());
-
-    if (thelabel == labeltag){ 
-      //primary vertices
-      if(thevar == "npv"){hists[j]->Fill(PV_npvs,theweight);}
-      //eta of taus
-      if(thevar == "eta_2"){hists[j]->Fill(tau_eta->at(idx_2),theweight);}
-      //visible mass
-      if(thevar == "m_vis"){
-	ROOT::Math::PtEtaPhiMVector p4_1(muon_pt->at(idx_1),muon_eta->at(idx_1),
-						  muon_phi->at(idx_1), muon_mass->at(idx_1));
-	ROOT::Math::PtEtaPhiMVector p4_2(tau_pt->at(idx_2),tau_eta->at(idx_2),
-						  tau_phi->at(idx_2), tau_mass->at(idx_2));
-	hists[j]->Fill(float((p4_1+p4_2).M()),theweight);
+  if(muon_ch->at(idx_1)*tau_ch->at(idx_2)<0){
+      //fill histograms for signal region
+      Int_t histsize = sizeof(hists)/sizeof(hists[0]);
+      for (Int_t j=0;j<histsize;++j){
+	
+	TString histname = TString(hists[j]->GetName());
+	TString thelabel = histname(0,histname.First("_"));
+	TString thevar = histname(histname.First("_")+1,histname.Sizeof());
+	
+	if (thelabel == labeltag){ 
+	  //primary vertices
+	  if(thevar == "npv"){hists[j]->Fill(PV_npvs,theweight);}
+	  //eta of taus
+	  if(thevar == "eta_2"){hists[j]->Fill(tau_eta->at(idx_2),theweight);}
+	  //visible mass
+	  if(thevar == "m_vis"){
+	    ROOT::Math::PtEtaPhiMVector p4_1(muon_pt->at(idx_1),muon_eta->at(idx_1),
+					     muon_phi->at(idx_1), muon_mass->at(idx_1));
+	    ROOT::Math::PtEtaPhiMVector p4_2(tau_pt->at(idx_2),tau_eta->at(idx_2),
+					     tau_phi->at(idx_2), tau_mass->at(idx_2));
+	    hists[j]->Fill(float((p4_1+p4_2).M()),theweight);
+	  }
+	}
       }
     }
-
-  }
 
 
 }//------analysis()
@@ -682,33 +862,49 @@ int main()
  * multiplying the integrated luminosity of the data with the cross-section of
  * the process in the datasets divided by the number of simulated events.
  */
-//const float integratedLuminosity = 4.412 * 1000.0; // Run2012B only
-//const float integratedLuminosity = 7.055 * 1000.0; // Run2012C only
- const float integratedLuminosity = 11.467 * 1000.0; // Run2012B+C
+  //const float integratedLuminosity = 4.412 * 1000.0; // Run2012B only
+  //const float integratedLuminosity = 7.055 * 1000.0; // Run2012C only
+  const float integratedLuminosity = 11.467 * 1000.0; // Run2012B+C
 
- //const float ggH_w = 19.6 / 476963.0 * integratedLuminosity;
- //const float qqH_w = 1.55 / 491653.0 * integratedLuminosity;
+ const float fullEventsB = 35647508.0; //Full number of events Run 2012B
+ const float fullEventsC = 51303171.0; //Full number of events Run 2012C
+ const float fullEventsBC = fullEventsB+fullEventsC;
+
+ // const float ggH_w = 19.6 / 476963.0 * integratedLuminosity;
+ // const float qqH_w = 1.55 / 491653.0 * integratedLuminosity;
+ // const float W1J_w =  6381.2 / 29784800.0 * integratedLuminosity;
+ // const float W2J_w =  2039.8 / 30693853.0 * integratedLuminosity;
+ // const float W3J_w =  612.5 / 15241144.0 * integratedLuminosity;
  // const float TT_w = 225.2 / 6423106.0 * integratedLuminosity;
- //const float W1J =  6381.2 / 29784800.0 * integratedLuminosity;
- //const float W2J =  2039.8 / 30693853.0 * integratedLuminosity;
- //const float W3J =  612.5 / 15241144.0 * integratedLuminosity;
- const float dataRunB_w = 1.0;
- const float dataRunC_w = 1.0;
- // const float ZLL_w = 3503.7 / 30458871.0 * integratedLuminosity;
- const float ZLL_w = 3503.7 / 439673.0 * integratedLuminosity;
+ // const float ZLL_w = 3503.7 / 439673.0 * integratedLuminosity;
+ // const float dataRunB_w = 1.0;
+ // const float dataRunC_w = 1.0;
+
+ //v10
+ const float ggH_w = 19.6 / 476963.0 * integratedLuminosity;
+ const float qqH_w = 1.55 / 491653.0 * integratedLuminosity;
+  const float W1J_w =  6381.2 / 29784800.0 * integratedLuminosity;
+  const float W2J_w =  2039.8 / 30693853.0 * integratedLuminosity;
+  const float W3J_w =  612.5 / 15241144.0 * integratedLuminosity;
+  const float TT_w = 225.2 / 6423106.0 * integratedLuminosity;
+  const float ZLL_w = 3503.7 / 439673.0 * integratedLuminosity;
+  const float dataRunB_w = 1.0;
+  const float dataRunC_w = 1.0;
+
 
 
  map<string, pair<string,float> > sampleNames;
- // sampleNames.insert(make_pair("GluGluToHToTauTau",make_pair("ggH",ggH_w)));
- //sampleNames.insert(make_pair("VBF_HToTauTau",make_pair("qqH",qqH_w)));
- //sampleNames.insert(make_pair("W1JetsToLNu",make_pair("W1J",W1J_w)));
- //sampleNames.insert(make_pair("W2JetsToLNu",make_pair("W2J",W2J_w)));
- //sampleNames.insert(make_pair("W3JetsToLNu",make_pair("W3J",W3J_w)));
- //sampleNames.insert(make_pair(("TTbar",make_pair("TT",TT_w)));
+ sampleNames.insert(make_pair("GluGluToHToTauTau",make_pair("ggH",ggH_w)));
+ sampleNames.insert(make_pair("VBF_HToTauTau",make_pair("qqH",qqH_w)));
+ sampleNames.insert(make_pair("W1JetsToLNu",make_pair("W1J",W1J_w)));
+ sampleNames.insert(make_pair("W2JetsToLNu",make_pair("W2J",W2J_w)));
+ sampleNames.insert(make_pair("W3JetsToLNu",make_pair("W3J",W3J_w)));
+ sampleNames.insert(make_pair("TTbar",make_pair("TT",TT_w)));
+ sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZLL",ZLL_w)));
  sampleNames.insert(make_pair("Run2012B_TauPlusX",make_pair("dataRunB",dataRunB_w)));
- //sampleNames.insert(make_pair("Run2012C_TauPlusX",make_pair("dataRunC",dataRunC_w)));
- //sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZLL",ZLL_w)));
- //sampleNames.insert(make_pair("DYJetsToLL",make_pair("ZTT",ZTT_w)));
+ sampleNames.insert(make_pair("Run2012C_TauPlusX",make_pair("dataRunC",dataRunC_w)));
+
+ 
 
 			
   //loop over sample files with names  defined above
@@ -719,9 +915,10 @@ int main()
     TString thelabel = it->second.first;
     Float_t sampleweight = it->second.second;
   
+    TStopwatch time;
+    time.Start();
     cout << ">>> Processing sample " << samplename <<" with label "<<thelabel<<" and weight "<<sampleweight<<":" <<endl;
-    //TStopwatch time;
-    //time.Start();
+    
  
     TString filename = samplesBasePath+samplename+".root";
     
@@ -730,11 +927,13 @@ int main()
 
     cout<<"Run the event loop"<<endl;
     mytemplate.Loop();
-
+    time.Stop();
+    time.Print();
   }
 
   TFile* hfile = new TFile("histograms.root","RECREATE");
-  
+
+  //Save signal region histos
   dataRunB_npv->Write();
   dataRunB_eta_2->Write();
   dataRunB_m_vis->Write();
@@ -747,7 +946,71 @@ int main()
   ZLL_eta_2->Write();
   ZLL_m_vis->Write();
 
+  TT_npv->Write();
+  TT_eta_2->Write();
+  TT_m_vis->Write();
+
+  W3J_npv->Write();
+  W3J_eta_2->Write();
+  W3J_m_vis->Write();
+
+  W2J_npv->Write();
+  W2J_eta_2->Write();
+  W2J_m_vis->Write();
+
+  W1J_npv->Write();
+  W1J_eta_2->Write();
+  W1J_m_vis->Write();
+
+  qqH_npv->Write();
+  qqH_eta_2->Write();
+  qqH_m_vis->Write();
+
+  ggH_npv->Write();
+  ggH_eta_2->Write();
+  ggH_m_vis->Write();
+
+  //Save control region histos
+  dataRunB_npv_cr->Write();
+  dataRunB_eta_2_cr->Write();
+  dataRunB_m_vis_cr->Write();
+  
+  dataRunC_npv_cr->Write();
+  dataRunC_eta_2_cr->Write();
+  dataRunC_m_vis_cr->Write();
+
+  ZLL_npv_cr->Write();
+  ZLL_eta_2_cr->Write();
+  ZLL_m_vis_cr->Write();
+
+  TT_npv_cr->Write();
+  TT_eta_2_cr->Write();
+  TT_m_vis_cr->Write();
+
+  W3J_npv_cr->Write();
+  W3J_eta_2_cr->Write();
+  W3J_m_vis_cr->Write();
+
+  W2J_npv_cr->Write();
+  W2J_eta_2_cr->Write();
+  W2J_m_vis_cr->Write();
+
+  W1J_npv_cr->Write();
+  W1J_eta_2_cr->Write();
+  W1J_m_vis_cr->Write();
+
+  qqH_npv_cr->Write();
+  qqH_eta_2_cr->Write();
+  qqH_m_vis_cr->Write();
+
+  ggH_npv_cr->Write();
+  ggH_eta_2_cr->Write();
+  ggH_m_vis_cr->Write();
+
+
   hfile->Close();
+
+
   return 0;
 
 }
