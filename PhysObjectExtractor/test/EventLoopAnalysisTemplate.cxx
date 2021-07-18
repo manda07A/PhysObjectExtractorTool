@@ -42,8 +42,8 @@ using namespace std;
 /*
  * Base path to local filesystem or to EOS containing the datasets
  */
-//const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/upload/od-workshop/ws2021/v5/";
-const std::string samplesBasePath = "v10/";
+//const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/upload/od-workshop/ws2021/";
+const std::string samplesBasePath = "skim/";
 
 
 //book example histograms for specific variables
@@ -365,26 +365,17 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
 // used to generate this class and read the Tree.
    TTree* tree = 0;
    TFile *f = TFile::Open(filename);
-   //always, by default, use mytrigger as starting directory/tree
-   //because it is the most complex
-   //TDirectory * dir = (TDirectory*)f->Get(filename+":/mytriggers");
-   tree = (TTree*)f->Get("mytriggers/Events");
-   
+   tree = (TTree*)f->Get("myevents/Events");
    //Get trees for friendship
-   tevents = (TTree*)f->Get("myevents/Events");
    tvertex = (TTree*)f->Get("mypvertex/Events");
    tmuons = (TTree*)f->Get("mymuons/Events");
    ttaus = (TTree*)f->Get("mytaus/Events");
    tmets = (TTree*)f->Get("mymets/Events");
-   
-   
    //Make friendship	
-   tree->AddFriend(tevents);
    tree->AddFriend(tvertex);
    tree->AddFriend(tmuons);
    tree->AddFriend(ttaus);
    tree->AddFriend(tmets);
-
    Init(tree);
 }
 
@@ -553,16 +544,16 @@ void EventLoopAnalysisTemplate::analysis()
   //cout<<"analysis() execution"<<endl;
 
   //minimal selection including trigger requirement
-  if (!MinimalSelection()) return;
-  counter_ms++;
+  //if (!MinimalSelection()) return;
+  //counter_ms++;
 
   //find at least a good muon
-  if (!FindGoodMuons()) return;
-  counter_gm++;
+  //if (!FindGoodMuons()) return;
+  //counter_gm++;
 
   //find at least a good tau
-  if (!FindGoodTaus()) return;
-  counter_gt++;
+  //if (!FindGoodTaus()) return;
+  //counter_gt++;
 
   //Find the best muon-tau pair and get indexes (1 is muon, 2 is tau)
   vector<int> GoodMuonTauPair = FindMuonTauPair();
@@ -865,32 +856,16 @@ int main()
   //const float integratedLuminosity = 4.412 * 1000.0; // Run2012B only
   //const float integratedLuminosity = 7.055 * 1000.0; // Run2012C only
   const float integratedLuminosity = 11.467 * 1000.0; // Run2012B+C
-
- const float fullEventsB = 35647508.0; //Full number of events Run 2012B
- const float fullEventsC = 51303171.0; //Full number of events Run 2012C
- const float fullEventsBC = fullEventsB+fullEventsC;
-
- // const float ggH_w = 19.6 / 476963.0 * integratedLuminosity;
- // const float qqH_w = 1.55 / 491653.0 * integratedLuminosity;
- // const float W1J_w =  6381.2 / 29784800.0 * integratedLuminosity;
- // const float W2J_w =  2039.8 / 30693853.0 * integratedLuminosity;
- // const float W3J_w =  612.5 / 15241144.0 * integratedLuminosity;
- // const float TT_w = 225.2 / 6423106.0 * integratedLuminosity;
- // const float ZLL_w = 3503.7 / 439673.0 * integratedLuminosity;
- // const float dataRunB_w = 1.0;
- // const float dataRunC_w = 1.0;
-
- //v10
- const float ggH_w = 19.6 / 476963.0 * integratedLuminosity;
- const float qqH_w = 1.55 / 491653.0 * integratedLuminosity;
+  
+  const float ggH_w = 19.6 / 476963.0 * integratedLuminosity;
+  const float qqH_w = 1.55 / 491653.0 * integratedLuminosity;
   const float W1J_w =  6381.2 / 29784800.0 * integratedLuminosity;
   const float W2J_w =  2039.8 / 30693853.0 * integratedLuminosity;
   const float W3J_w =  612.5 / 15241144.0 * integratedLuminosity;
   const float TT_w = 225.2 / 6423106.0 * integratedLuminosity;
-  const float ZLL_w = 3503.7 / 439673.0 * integratedLuminosity;
+  const float ZLL_w = 3503.7 / 30458871.0 * integratedLuminosity;
   const float dataRunB_w = 1.0;
   const float dataRunC_w = 1.0;
-
 
 
  map<string, pair<string,float> > sampleNames;
