@@ -21,7 +21,9 @@ colors = {
         "TT": ROOT.TColor.GetColor(155, 152, 204),
         "W": ROOT.TColor.GetColor(222, 90, 106),
         "QCD":  ROOT.TColor.GetColor(250, 202, 255),
-        "ZLL": ROOT.TColor.GetColor(100, 192, 232),
+        "ZLL": ROOT.TColor.GetColor(248, 206, 104),
+        #"ZLL": ROOT.TColor.GetColor(100, 192, 232),
+        #"ZTT": ROOT.TColor.GetColor(248, 206, 104),
         }
 
 # Retrieve a histogram from the input file based on the process and the variable

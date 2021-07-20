@@ -43,7 +43,7 @@ using namespace std;
  * Base path to local filesystem or to EOS containing the datasets
  */
 //const std::string samplesBasePath = "root://eospublic.cern.ch//eos/opendata/cms/upload/od-workshop/ws2021/";
-const std::string samplesBasePath = "skim/";
+const std::string samplesBasePath = "skim5/";
 
 
 //book example histograms for specific variables
@@ -324,59 +324,64 @@ EventLoopAnalysisTemplate::EventLoopAnalysisTemplate(TString thefile, TString th
   hists[26] = ggH_eta_2;
 
   //Load histograms for control region
-  hists_cr[0] = dataRunB_npv;
-  hists_cr[1] = dataRunB_m_vis;
-  hists_cr[2] = dataRunB_eta_2;
+  hists_cr[0] = dataRunB_npv_cr;
+  hists_cr[1] = dataRunB_m_vis_cr;
+  hists_cr[2] = dataRunB_eta_2_cr;
 
-  hists_cr[3] = dataRunC_npv;
-  hists_cr[4] = dataRunC_m_vis;
-  hists_cr[5] = dataRunC_eta_2;
+  hists_cr[3] = dataRunC_npv_cr;
+  hists_cr[4] = dataRunC_m_vis_cr;
+  hists_cr[5] = dataRunC_eta_2_cr;
 
-  hists_cr[6] = ZLL_npv;
-  hists_cr[7] = ZLL_m_vis;
-  hists_cr[8] = ZLL_eta_2;
+  hists_cr[6] = ZLL_npv_cr;
+  hists_cr[7] = ZLL_m_vis_cr;
+  hists_cr[8] = ZLL_eta_2_cr;
 
-  hists_cr[9] = TT_npv;
-  hists_cr[10] = TT_m_vis;
-  hists_cr[11] = TT_eta_2;
+  hists_cr[9] = TT_npv_cr;
+  hists_cr[10] = TT_m_vis_cr;
+  hists_cr[11] = TT_eta_2_cr;
 
-  hists_cr[12] = W3J_npv;
-  hists_cr[13] = W3J_m_vis;
-  hists_cr[14] = W3J_eta_2;
+  hists_cr[12] = W3J_npv_cr;
+  hists_cr[13] = W3J_m_vis_cr;
+  hists_cr[14] = W3J_eta_2_cr;
 
-  hists_cr[15] = W2J_npv;
-  hists_cr[16] = W2J_m_vis;
-  hists_cr[17] = W2J_eta_2;
+  hists_cr[15] = W2J_npv_cr;
+  hists_cr[16] = W2J_m_vis_cr;
+  hists_cr[17] = W2J_eta_2_cr;
 
-  hists_cr[18] = W1J_npv;
-  hists_cr[19] = W1J_m_vis;
-  hists_cr[20] = W1J_eta_2;
+  hists_cr[18] = W1J_npv_cr;
+  hists_cr[19] = W1J_m_vis_cr;
+  hists_cr[20] = W1J_eta_2_cr;
 
-  hists_cr[21] = qqH_npv;
-  hists_cr[22] = qqH_m_vis;
-  hists_cr[23] = qqH_eta_2;
+  hists_cr[21] = qqH_npv_cr;
+  hists_cr[22] = qqH_m_vis_cr;
+  hists_cr[23] = qqH_eta_2_cr;
 
-  hists_cr[24] = ggH_npv;
-  hists_cr[25] = ggH_m_vis;
-  hists_cr[26] = ggH_eta_2;
+  hists_cr[24] = ggH_npv_cr;
+  hists_cr[25] = ggH_m_vis_cr;
+  hists_cr[26] = ggH_eta_2_cr;
 
 
-// if parameter tree is not specified (or zero), connect the file
-// used to generate this class and read the Tree.
-   TTree* tree = 0;
-   TFile *f = TFile::Open(filename);
-   tree = (TTree*)f->Get("myevents/Events");
-   //Get trees for friendship
-   tvertex = (TTree*)f->Get("mypvertex/Events");
-   tmuons = (TTree*)f->Get("mymuons/Events");
-   ttaus = (TTree*)f->Get("mytaus/Events");
-   tmets = (TTree*)f->Get("mymets/Events");
-   //Make friendship	
-   tree->AddFriend(tvertex);
-   tree->AddFriend(tmuons);
-   tree->AddFriend(ttaus);
-   tree->AddFriend(tmets);
-   Init(tree);
+  // if parameter tree is not specified (or zero), connect the file
+  // used to generate this class and read the Tree.
+  TTree* tree = 0;
+  TFile *f = TFile::Open(filename);
+  //trigger should go first as it is the more complicated one
+  tree = (TTree*)f->Get("mytriggers/Events");
+  //Get trees for friendship
+  tevents = (TTree*)f->Get("myevents/Events");
+  tvertex = (TTree*)f->Get("mypvertex/Events");
+  tmuons = (TTree*)f->Get("mymuons/Events");
+  ttaus = (TTree*)f->Get("mytaus/Events");
+  tmets = (TTree*)f->Get("mymets/Events");
+  //Make friends so we can have access to friends variables	
+  //we may not use all of the available information
+  //it is just an example
+  tree->AddFriend(tevents);
+  tree->AddFriend(tvertex);
+  tree->AddFriend(tmuons);
+  tree->AddFriend(ttaus);
+  tree->AddFriend(tmets);
+  Init(tree);
 }
 
 EventLoopAnalysisTemplate::~EventLoopAnalysisTemplate()
@@ -544,35 +549,26 @@ void EventLoopAnalysisTemplate::analysis()
   //cout<<"analysis() execution"<<endl;
 
   //minimal selection including trigger requirement
-  //if (!MinimalSelection()) return;
-  //counter_ms++;
+  if (!MinimalSelection()) return;
+  counter_ms++;
 
-  //find at least a good muon
-  //if (!FindGoodMuons()) return;
-  //counter_gm++;
-
-  //find at least a good tau
-  //if (!FindGoodTaus()) return;
-  //counter_gt++;
 
   //Find the best muon-tau pair and get indexes (1 is muon, 2 is tau)
   vector<int> GoodMuonTauPair = FindMuonTauPair();
   int idx_1 = GoodMuonTauPair[0];
   int idx_2 = GoodMuonTauPair[1];
   if (!(idx_1!=-1 && idx_2!=-1)) return;
-    counter_pair++;
+  counter_pair++;
 
   //Muon transverse mass cut for W+jets suppression
   if (!(compute_mt(muon_pt->at(idx_1),muon_phi->at(idx_1),met_pt,met_phi)<30)) return;
   counter_tm++;
-
   //Require isolated muon for signal region
   if (!(muon_pfreliso03all->at(idx_1)<0.1)) return;
   counter_iso++;
 
   //Require opposite charge for control or signal region
   if(muon_ch->at(idx_1)*tau_ch->at(idx_2)>0){ 
-      counter_ch++;
     //fill histograms for control region
       Int_t hists_crsize = sizeof(hists_cr)/sizeof(hists_cr[0]);
       for (Int_t j=0;j<hists_crsize;++j){
@@ -580,14 +576,14 @@ void EventLoopAnalysisTemplate::analysis()
 	TString histname = TString(hists_cr[j]->GetName());
 	TString thelabel = histname(0,histname.First("_"));
 	TString thevar = histname(histname.First("_")+1,histname.Sizeof());
-	
+
 	if (thelabel == labeltag){ 
 	  //primary vertices
-	  if(thevar == "npv"){hists_cr[j]->Fill(PV_npvs,theweight);}
+	  if(thevar == "npv_cr"){hists_cr[j]->Fill(PV_npvs,theweight);}
 	  //eta of taus
-	  if(thevar == "eta_2"){hists_cr[j]->Fill(tau_eta->at(idx_2),theweight);}
+	  if(thevar == "eta_2_cr"){hists_cr[j]->Fill(tau_eta->at(idx_2),theweight);}
 	  //visible mass
-	  if(thevar == "m_vis"){
+	  if(thevar == "m_vis_cr"){
 	    ROOT::Math::PtEtaPhiMVector p4_1(muon_pt->at(idx_1),muon_eta->at(idx_1),
 					     muon_phi->at(idx_1), muon_mass->at(idx_1));
 	    ROOT::Math::PtEtaPhiMVector p4_2(tau_pt->at(idx_2),tau_eta->at(idx_2),
@@ -599,31 +595,33 @@ void EventLoopAnalysisTemplate::analysis()
   }
 
   if(muon_ch->at(idx_1)*tau_ch->at(idx_2)<0){
-      //fill histograms for signal region
-      Int_t histsize = sizeof(hists)/sizeof(hists[0]);
-      for (Int_t j=0;j<histsize;++j){
-	
-	TString histname = TString(hists[j]->GetName());
-	TString thelabel = histname(0,histname.First("_"));
-	TString thevar = histname(histname.First("_")+1,histname.Sizeof());
-	
-	if (thelabel == labeltag){ 
-	  //primary vertices
-	  if(thevar == "npv"){hists[j]->Fill(PV_npvs,theweight);}
-	  //eta of taus
-	  if(thevar == "eta_2"){hists[j]->Fill(tau_eta->at(idx_2),theweight);}
-	  //visible mass
-	  if(thevar == "m_vis"){
-	    ROOT::Math::PtEtaPhiMVector p4_1(muon_pt->at(idx_1),muon_eta->at(idx_1),
-					     muon_phi->at(idx_1), muon_mass->at(idx_1));
-	    ROOT::Math::PtEtaPhiMVector p4_2(tau_pt->at(idx_2),tau_eta->at(idx_2),
-					     tau_phi->at(idx_2), tau_mass->at(idx_2));
-	    hists[j]->Fill(float((p4_1+p4_2).M()),theweight);
-	  }
+    counter_ch++;
+    
+    //fill histograms for signal region
+    Int_t histsize = sizeof(hists)/sizeof(hists[0]);
+    for (Int_t j=0;j<histsize;++j){
+      
+      TString histname = TString(hists[j]->GetName());
+      TString thelabel = histname(0,histname.First("_"));
+      TString thevar = histname(histname.First("_")+1,histname.Sizeof());
+      
+      if (thelabel == labeltag){ 
+	//primary vertices
+	if(thevar == "npv"){hists[j]->Fill(PV_npvs,theweight);}
+	//eta of taus
+	if(thevar == "eta_2"){hists[j]->Fill(tau_eta->at(idx_2),theweight);}
+	//visible mass
+	if(thevar == "m_vis"){
+	  ROOT::Math::PtEtaPhiMVector p4_1(muon_pt->at(idx_1),muon_eta->at(idx_1),
+					   muon_phi->at(idx_1), muon_mass->at(idx_1));
+	  ROOT::Math::PtEtaPhiMVector p4_2(tau_pt->at(idx_2),tau_eta->at(idx_2),
+					   tau_phi->at(idx_2), tau_mass->at(idx_2));
+	  hists[j]->Fill(float((p4_1+p4_2).M()),theweight);
 	}
       }
     }
-
+  }
+  
 
 }//------analysis()
 
@@ -635,10 +633,8 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
 {
 //-----------------------------------------------------------------
 
-  //cout<<"Applying minimal selection"<<endl;
+ //cout<<"Applying minimal selection"<<endl;
   bool isTrigger = false;
-  bool isMuons = false;
-  bool isTaus = false;
 
   //Check trigger and acceptance bit
   for (map<string, int>::iterator it=triggermap->begin();it!=triggermap->end();it++){
@@ -649,16 +645,8 @@ bool EventLoopAnalysisTemplate::MinimalSelection()
     }
   }
 
-  //Enforce presence of muons
-  Int_t nmuons = muon_pt->size();
-  if (nmuons>0){isMuons = true;}
-
-  //Enforce presence of taus
-  Int_t ntaus = tau_pt->size();
-  if (ntaus>0){isTaus = true;}
-
-  return (isTrigger && isMuons && isTaus);
-
+ 
+  return isTrigger;
 }//------MinimalSelection
 
 
@@ -683,28 +671,6 @@ bool EventLoopAnalysisTemplate::isGoodMuon(Int_t idx)
 
 
 
-
-/*
- * Reduce the loop to the interesting events containing at least one interesting
- * muon candidate.
- */
-//-----------------------------------------------------------------
-bool EventLoopAnalysisTemplate::FindGoodMuons() 
-{
-//-----------------------------------------------------------------
-  bool GoodMuonFound = false;
-  
-  Int_t nmuons = muon_pt->size();
-  for (Int_t j=0; j<nmuons;++j){
-    if (isGoodMuon(j)){
-      GoodMuonFound = true;
-      return GoodMuonFound;
-    }
-  }    
-
-  return GoodMuonFound;
-
- }//-------FindGoodMuons
 
 
 /*
@@ -739,29 +705,6 @@ bool EventLoopAnalysisTemplate::isGoodTau(Int_t idx)
 
 
 
-
-
-/*
- * Reduce the loop to the interesting events containing at least one interesting
- * tau candidate.
- */
-//-----------------------------------------------------------------
-bool EventLoopAnalysisTemplate::FindGoodTaus() 
-{
-//-----------------------------------------------------------------
-  bool GoodTauFound = false;
-
-  Int_t ntaus = tau_pt->size();
-  for (Int_t j=0; j<ntaus;++j){
-    if (isGoodTau(j)){
-      GoodTauFound = true;
-      return GoodTauFound;
-    }
-  }    
-
-  return GoodTauFound;
-
- }//-------FindGoodTaus
 
 
 //-----------------------------------------------------------------
