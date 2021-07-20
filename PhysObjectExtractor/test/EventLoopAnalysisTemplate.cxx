@@ -223,7 +223,6 @@ public :
   bool isGoodTau(Int_t idx);
   std::vector<int> FindMuonTauPair();
   float compute_mt(float pt_1, float phi_1,float pt_met, float phi_met);
-  ROOT::Math::PtEtaPhiMVector get_p4(float pt, float eta, float phi, float mass);
  
 };
 
