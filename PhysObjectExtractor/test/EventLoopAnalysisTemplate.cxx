@@ -147,20 +147,8 @@ public :
   TTree           *tmuons;
   TTree           *ttaus;
   TTree           *tmets;
-
-  //cut yield counters
-  Int_t counter_ms;
-  Int_t counter_gm;
-  Int_t counter_gt;
-  Int_t counter_pair;
-  Int_t counter_tm;
-  Int_t counter_iso;
-  Int_t counter_ch;
-  
-  
-  //Add more trees for friendship
-  
   Int_t           fCurrent; //!current Tree number in a TChain
+
   TString          labeltag;
   TString         filename;
   Float_t          theweight;
@@ -233,8 +221,6 @@ public :
   bool MinimalSelection();
   bool isGoodMuon(Int_t idx);
   bool isGoodTau(Int_t idx);
-  bool FindGoodMuons();
-  bool FindGoodTaus();
   std::vector<int> FindMuonTauPair();
   float compute_mt(float pt_1, float phi_1,float pt_met, float phi_met);
   ROOT::Math::PtEtaPhiMVector get_p4(float pt, float eta, float phi, float mass);
@@ -503,15 +489,6 @@ void EventLoopAnalysisTemplate::Loop()
 {
   if (fChain == 0) return;
 
-  //Keep track of cuts efficiencies
-  counter_ms = 0;
-  counter_gm = 0;
-  counter_gt = 0;
-  counter_pair = 0;
-  counter_tm = 0;
-  counter_iso = 0;
-  counter_ch = 0;
-
     Long64_t nentries = fChain->GetEntriesFast();
 
     Long64_t nbytes = 0, nb = 0;
@@ -520,7 +497,6 @@ void EventLoopAnalysisTemplate::Loop()
 	if(jentry%1000 == 0) {
 	      cout<<"Processed "<<jentry<<" events out of "<<nentries<<endl;
 	} 
-	//if(jentry==4000){return;}
        //cout<<"Load the current event"<<endl;
        Long64_t ientry = LoadTree(jentry);
        if (ientry < 0) break;
@@ -530,14 +506,6 @@ void EventLoopAnalysisTemplate::Loop()
 
     }
 
-    //Print cut yields:
-    cout<<"counter_ms = "<<counter_ms<<": "<<counter_ms*100/float(nentries)<<"%"<<endl;
-    cout<<"counter_gm = "<<counter_gm<<": "<<counter_gm*100/float(nentries)<<"%"<<endl;
-    cout<<"counter_gt = "<<counter_gt<<": "<<counter_gt*100/float(nentries)<<"%"<<endl;
-    cout<<"counter_pair = "<<counter_pair<<": "<<counter_pair*100/float(nentries)<<"%"<<endl;
-    cout<<"counter_tm = "<<counter_tm<<": "<<counter_tm*100/float(nentries)<<"%"<<endl;
-    cout<<"counter_iso = "<<counter_iso<<": "<<counter_iso*100/float(nentries)<<"%"<<endl;
-    cout<<"counter_ch = "<<counter_ch<<": "<<counter_ch*100/float(nentries)<<"%"<<endl;
 }
 
 
@@ -550,26 +518,22 @@ void EventLoopAnalysisTemplate::analysis()
 
   //minimal selection including trigger requirement
   if (!MinimalSelection()) return;
-  counter_ms++;
-
 
   //Find the best muon-tau pair and get indexes (1 is muon, 2 is tau)
   vector<int> GoodMuonTauPair = FindMuonTauPair();
   int idx_1 = GoodMuonTauPair[0];
   int idx_2 = GoodMuonTauPair[1];
   if (!(idx_1!=-1 && idx_2!=-1)) return;
-  counter_pair++;
 
   //Muon transverse mass cut for W+jets suppression
   if (!(compute_mt(muon_pt->at(idx_1),muon_phi->at(idx_1),met_pt,met_phi)<30)) return;
-  counter_tm++;
+
   //Require isolated muon for signal region
   if (!(muon_pfreliso03all->at(idx_1)<0.1)) return;
-  counter_iso++;
 
-  //Require opposite charge for control or signal region
+
+  //fill histograms for control region
   if(muon_ch->at(idx_1)*tau_ch->at(idx_2)>0){ 
-    //fill histograms for control region
       Int_t hists_crsize = sizeof(hists_cr)/sizeof(hists_cr[0]);
       for (Int_t j=0;j<hists_crsize;++j){
 	
@@ -593,11 +557,9 @@ void EventLoopAnalysisTemplate::analysis()
 	}
       }
   }
-
+  
+  //fill histograms for signal region
   if(muon_ch->at(idx_1)*tau_ch->at(idx_2)<0){
-    counter_ch++;
-    
-    //fill histograms for signal region
     Int_t histsize = sizeof(hists)/sizeof(hists[0]);
     for (Int_t j=0;j<histsize;++j){
       
